@@ -1,4 +1,28 @@
-public class StorageServer {
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
+
+public class StorageServer implements Hello {
+
+    private StorageServer() {
+        // Class constructor
+    }
+
+    public static void main(String args[]) {
+        try {
+            StorageServer obj = new StorageServer();
+            Hello stub = (Hello) UnicastRemoteObject.exportObject(obj, 0);
+
+            // Bind the remote object's stub in the registry
+            Registry registry = LocateRegistry.getRegistry();
+            registry.bind("Hello", stub);
+
+            System.err.println("Server ready");
+        } catch (Exception e) {
+            System.err.println(e.toString());
+            e.printStackTrace();
+        }
+    }
 
     // CALLS FROM CLIENT
     public boolean init(String local_path, String filesystem_path) {  // On startup
@@ -32,5 +56,9 @@ public class StorageServer {
     public boolean get(String path) {
         // Example: get("/courses/file1.txt"); -> Downloads the file
         return false;
+    }
+
+    public String sayHello() {
+        return "Hello, world!";
     }
 }
