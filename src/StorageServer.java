@@ -1,8 +1,26 @@
+import java.io.File;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
-public class StorageServer implements Hello {
+interface StorageInterface extends Remote {
+    // CALLS FROM CLIENT
+    public boolean init(String local_path, String filesystem_path) throws RemoteException;
+
+    public boolean close(String local_path) throws RemoteException;
+
+    public boolean create(String path) throws RemoteException;
+
+    public boolean create(String path, String blob) throws RemoteException;
+
+    public boolean del(String path) throws RemoteException;
+
+    public boolean get(String path) throws RemoteException;
+}
+
+public class StorageServer implements StorageInterface {
 
     private StorageServer() {
         // Class constructor
@@ -11,11 +29,11 @@ public class StorageServer implements Hello {
     public static void main(String args[]) {
         try {
             StorageServer obj = new StorageServer();
-            Hello stub = (Hello) UnicastRemoteObject.exportObject(obj, 0);
+            StorageInterface stub = (StorageInterface) UnicastRemoteObject.exportObject(obj, 0);
 
             // Bind the remote object's stub in the registry
             Registry registry = LocateRegistry.getRegistry();
-            registry.bind("Hello", stub);
+            registry.bind("StorageServer", stub);
 
             System.err.println("Server ready");
         } catch (Exception e) {
@@ -28,7 +46,13 @@ public class StorageServer implements Hello {
     public boolean init(String local_path, String filesystem_path) {  // On startup
         // Example: init("/home/student/courses", "/courses"); -> Local dir maps into global namespace
         //                                                        Must call add_storage_server on the metadata server
-        return false;
+        String path = "storage" + (filesystem_path.startsWith("/") ? filesystem_path : "/" + filesystem_path);
+        boolean success = (new File(path)).mkdirs();
+        if (!success) {
+            System.err.println("Failed to create filesystem dir.");
+            return false;
+        }
+        return true;
     }
 
     public boolean close(String local_path) {  // On close
@@ -56,9 +80,5 @@ public class StorageServer implements Hello {
     public boolean get(String path) {
         // Example: get("/courses/file1.txt"); -> Downloads the file
         return false;
-    }
-
-    public String sayHello() {
-        return "Hello, world!";
     }
 }

@@ -11,8 +11,8 @@ public class Client {
         String host = (args.length < 1) ? null : args[0];
         try {
             Registry registry = LocateRegistry.getRegistry(host);
-            Hello stub = (Hello) registry.lookup("Hello");
-            System.out.println(stub.sayHello());
+            StorageInterface stub = (StorageInterface) registry.lookup("StorageServer");
+            System.out.println(stub.init("lol", "/mydir1"));
         } catch (Exception e) {
             System.err.println(e.toString());
             e.printStackTrace();
