@@ -2,7 +2,6 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
 public class Client {
-
     private Client() {
         // Class constructor
     }
@@ -12,7 +11,7 @@ public class Client {
         try {
             Registry registry = LocateRegistry.getRegistry(host);
             StorageInterface stub = (StorageInterface) registry.lookup("StorageServer");
-            System.out.println(stub.init("lol", "/mydir1"));
+            System.out.println(stub.init("FS", "/mydir"));
         } catch (Exception e) {
             System.err.println(e.toString());
             e.printStackTrace();

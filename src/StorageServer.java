@@ -21,7 +21,6 @@ interface StorageInterface extends Remote {
 }
 
 public class StorageServer implements StorageInterface {
-
     private StorageServer() {
         // Class constructor
     }
