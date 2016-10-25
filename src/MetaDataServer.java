@@ -17,23 +17,23 @@ public class MetaDataServer {
     public static void addStorageServer(String host, String top_dir) {
         // Example: addStorageServer("machine1.dcc.fc.up.pt", "/courses");
         storageServers.put(top_dir, host);
-        fileSystem.addElement(top_dir);
+        fileSystem.addNode(top_dir);
     }
 
     public static void delStorageServer(String top_dir) {
         // Example: delStorageServer("/courses");
         storageServers.remove(top_dir);
-        fileSystem.delElement(top_dir);
+        fileSystem.delNode(top_dir);
     }
 
     public static void addStorageItem(String item) {
         // Example: addStorageItem("/courses/video1.avi");
-        fileSystem.addElement(item);
+        fileSystem.addNode(item);
     }
 
     public static void delStorageItem(String item) {
         // Example: delStorageItem("/courses/video1.avi");
-        fileSystem.delElement(item);
+        fileSystem.delNode(item);
     }
 
     // CALLS FROM CLIENT
@@ -48,10 +48,7 @@ public class MetaDataServer {
         return "";
     }
 
-    private static String[] splitPath(String path) {
-        String list[] = path.split("/");
-        if (list[0].equals("")) list = Arrays.copyOfRange(list, 1, list.length);
-        if (list[list.length - 1].equals("")) list = Arrays.copyOfRange(list, 0, list.length - 1);
-        return list;
+    private String[] splitPath(String path) {
+        return path.replaceAll("^/", "").replaceAll("/$", "").split("/");
     }
 }
