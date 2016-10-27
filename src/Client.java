@@ -11,7 +11,14 @@ public class Client {
         try {
             Registry registry = LocateRegistry.getRegistry(host);
             StorageInterface stub = (StorageInterface) registry.lookup("StorageServer");
-            System.out.println(stub.init("FS", "/mydir"));
+            stub.init("/home/fcup/sd", "/courses/");
+            stub.create("/courses/as/");
+            stub.create("/courses/sd");
+            stub.create("courses/tw/");
+            stub.create("courses/cp");
+            stub.create("/courses/cp/aulas.txt", "Computação Paralela\n");
+            stub.get("/courses/cp/aulas.txt");
+//            stub.close("/home/fcup/sd");
         } catch (Exception e) {
             System.err.println(e.toString());
             e.printStackTrace();
