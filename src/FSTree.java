@@ -24,8 +24,8 @@ public class FSTree {
 
     public FSNode getNode(String path) {
         FSNode target = root;
-        String list[] = splitPath(path);
-        for (String node : list) {
+        String nodes[] = splitPath(path);
+        for (String node : nodes) {
             target = target.getChild(node);
             if (target == null) break;
         }
