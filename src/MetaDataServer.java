@@ -1,4 +1,3 @@
-import java.util.Arrays;
 import java.util.HashMap;
 
 public class MetaDataServer {
@@ -10,7 +9,10 @@ public class MetaDataServer {
     }
 
     public static void main(String args[]) {
-
+        addStorageServer("dcc.fc.up.pt", "dcc");
+        addStorageItem("/dcc/sd/aulas");
+        addStorageItem("/dcc/cp/aulas");
+        System.out.println(lstat("/dcc/").toString());
     }
 
     // CALLS FROM STORAGE SERVER
@@ -37,18 +39,21 @@ public class MetaDataServer {
     }
 
     // CALLS FROM CLIENT
-    public String find(String path) {
+    public static String find(String path) {
         // Example: find("/courses"); -> "machine1.dcc.fc.up.pt"
         String top_dir = splitPath(path)[0];
         return storageServers.get(top_dir);
     }
 
-    public String lstat(String path) {
+    public static Stat lstat(String path) {
         // Example: lstat("/courses"); -> { "machine1.dcc.fc.up.pt", { "afile.txt", "bfile.txt", "..." } }
-        return "";
+        Stat stat = new Stat();
+        stat.server = find(path);
+        fileSystem.getNode(path).getChilds().forEach(child -> stat.items.add(child.getName()));
+        return stat;
     }
 
-    private String[] splitPath(String path) {
+    private static String[] splitPath(String path) {
         return path.replaceAll("^/", "").replaceAll("/$", "").split("/");
     }
 }
