@@ -4,6 +4,7 @@ import java.rmi.registry.Registry;
 public class Client {
     private Client() {
         // Class constructor
+
     }
 
     public static void main(String args[]) {
