@@ -49,7 +49,8 @@ public class MetaDataServer {
         // Example: lstat("/courses"); -> { "machine1.dcc.fc.up.pt", { "afile.txt", "bfile.txt", "..." } }
         Stat stat = new Stat();
         stat.server = find(path);
-        fileSystem.getNode(path).getChilds().forEach(child -> stat.items.add(child.getName()));
+        for (FSNode child : fileSystem.getNode(path).getChilds())
+            stat.items.add(child.getName());
         return stat;
     }
 
