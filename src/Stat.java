@@ -5,18 +5,23 @@ public class Stat {
     public String server;
     public List<String> items;
 
-    public Stat () {
+    public Stat() {
         this.server = new String();
         this.items = new ArrayList<String>();
     }
 
+    public Stat(String server, List<String> items) {
+        this.server = server;
+        this.items = items;
+    }
+
     public String toString() {
-        String str = new String();
-        str = str.concat("{ " + server + ", { ");
+        String stat = new String();
+        stat = stat.concat("{ " + server + ", { ");
         int i = 0;
         for (i = 0; i < items.size() - 1; i++)
-            str = str.concat(items.get(i) + ", ");
-        str = str.concat(items.get(i) + " } }");
-        return str;
+            stat = stat.concat(items.get(i) + ", ");
+        stat = stat.concat(items.get(i) + " } }");
+        return stat;
     }
 }
