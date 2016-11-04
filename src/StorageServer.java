@@ -64,7 +64,7 @@ public class StorageServer implements StorageInterface {
         // Example: init("/home/student/courses", "/courses"); -> Local dir maps into global namespace
         //                                                        Must call add_storage_server on the metadata server
         if (!checkPath(local_path)) {
-            Log.log(Level.SEVERE, "invalid local path", local_path);
+            Log.log(Level.SEVERE, "invalid local path ‘" + local_path + "’");
             throw new Exception("invalid local path ‘" + local_path + "’");
         }
         try {
@@ -76,14 +76,14 @@ public class StorageServer implements StorageInterface {
         LocalPath = local_path;
         File local_dir = new File(local_path + filesystem_path);
         if (!local_dir.exists() && !local_dir.mkdirs()) {
-            Log.log(Level.SEVERE, "could not create local path directory", local_path);
+            Log.log(Level.SEVERE, "could not create local path directory ‘" + local_path + "’");
             throw new Exception("could not create local path directory ‘" + local_path + "’");
         }
         if (!local_dir.isDirectory()) {
-            Log.log(Level.SEVERE, "local path is not a directory");
+            Log.log(Level.SEVERE, "local path is not a directory ‘" + local_path + "’");
             throw new Exception("local path is not a directory ‘" + local_path + "’");
         }
-        Log.log(Level.INFO, local_path, filesystem_path);
+        Log.log(Level.INFO, local_path + ", " + filesystem_path);
     }
 
     // ON CLOSE
@@ -91,7 +91,7 @@ public class StorageServer implements StorageInterface {
         // Example: close("/home/student/courses"); -> Closes local share
         //                                             Must call del_storage_server on the metadata server
         if (!checkPath(local_path)) {
-            Log.log(Level.SEVERE, "invalid local path", local_path);
+            Log.log(Level.SEVERE, "invalid local path ‘" + local_path + "’");
             throw new Exception("invalid local path ‘" + local_path + "’");
         }
         try {
@@ -102,10 +102,10 @@ public class StorageServer implements StorageInterface {
         }
         File local_dir = new File(local_path);
         if (!delRecursive(local_dir)) {
-            Log.log(Level.SEVERE, "could not delete local directory", local_path);
+            Log.log(Level.SEVERE, "could not delete local directory ‘" + local_path + "’");
             throw new Exception("could not delete local directory ‘" + local_path + "’");
         }
-        Log.log(Level.INFO, local_path, filesystem_path);
+        Log.log(Level.INFO, local_path + ", " + filesystem_path);
     }
 
     // CALLS FROM CLIENT
@@ -119,10 +119,10 @@ public class StorageServer implements StorageInterface {
         }
         File dir = new File(LocalPath + path);
         if (!dir.mkdir()) {
-            Log.log(Level.SEVERE, "could not create directory", path);
+            Log.log(Level.SEVERE, "could not create directory ‘" + path + "’");
             throw new Exception("could not create directory ‘" + path + "’");
         }
-        Log.log(Level.INFO, "create: ‘" + path + "’");
+        Log.log(Level.INFO, path);
     }
 
     public void create(String path, String blob) throws Exception {
@@ -135,7 +135,7 @@ public class StorageServer implements StorageInterface {
         }
         File file = new File(LocalPath + path);
         if (!file.createNewFile()) {
-            Log.log(Level.SEVERE, "could not create file", path);
+            Log.log(Level.SEVERE, "could not create file ‘" + path + "’");
             throw new Exception("could not create file ‘" + path + "’");
         }
         try {
@@ -143,7 +143,7 @@ public class StorageServer implements StorageInterface {
             writer.write(blob);
             writer.close();
         } catch (Exception e) {
-            Log.log(Level.SEVERE, "could not write to file", path);
+            Log.log(Level.SEVERE, "could not write to file ‘" + path + "’");
             throw new Exception("could not write to file ‘" + path + "’");
         }
         Log.log(Level.INFO, path);
@@ -160,11 +160,11 @@ public class StorageServer implements StorageInterface {
         }
         File target = new File(LocalPath + path);
         if (!target.exists()) {
-            Log.log(Level.SEVERE, "no such file or directory", path);
+            Log.log(Level.SEVERE, "no such file or directory ‘" + path + "’");
             throw new Exception("no such file or directory ‘" + path + "’");
         }
         if (!delRecursive(target)) {
-            Log.log(Level.SEVERE, "could not delete file or directory", path);
+            Log.log(Level.SEVERE, "could not delete file or directory ‘" + path + "’");
             throw new Exception("could not delete file or directory ‘" + path + "’");
         }
         Log.log(Level.INFO, path);
@@ -180,16 +180,16 @@ public class StorageServer implements StorageInterface {
     public File get(String path) throws Exception {
         // Example: get("/courses/file1.txt"); -> Downloads the file
         if (!checkPath(path)) {
-            Log.log(Level.SEVERE, "invalid path", path);
+            Log.log(Level.SEVERE, "invalid path ‘" + path + "’");
             throw new Exception("invalid path ‘" + path + "’");
         }
         File target = new File(LocalPath + path);
         if (!target.exists()) {
-            Log.log(Level.SEVERE, "no such file or directory", path);
+            Log.log(Level.SEVERE, "no such file or directory ‘" + path + "’");
             throw new Exception("no such file or directory ‘" + path + "’");
         }
         if (target.isDirectory()) {
-            Log.log(Level.SEVERE, "can not download a directory", path);
+            Log.log(Level.SEVERE, "can not download a directory ‘" + path + "’");
             throw new Exception("can not download a directory ‘" + path + "’");
         }
         return target;
