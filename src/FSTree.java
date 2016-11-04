@@ -1,5 +1,3 @@
-import com.sun.corba.se.spi.orbutil.fsm.FSM;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -12,38 +10,31 @@ public class FSTree {
         this.root = new FSNode();
     }
 
-    public void addNode(String path) throws Exception {
-        if (!checkPath(path)) throw new Exception("invalid path ‘" + path + "’");
-
+    public boolean addNode(String path) {
         String nodes[] = splitPath(path);
-        if (nodes.length == 1) root.addChild(nodes[0]);
-        else {
-            FSNode target = root;
-            for (String node : Arrays.copyOfRange(nodes, 0, nodes.length - 1)) {
-                target = target.getChild(node);
-                if (target == null) throw new Exception("no such file or directory ‘" + path + "’");
-            }
-            target.addChild(nodes[nodes.length - 1]);
+        if (nodes.length == 1) {
+            return root.addChild(nodes[0]);
         }
-    }
-
-    public void delNode(String path) throws Exception {
-        if (!checkPath(path)) throw new Exception("invalid path ‘" + path + "’");
-
-        try {
-            FSNode target = getNode(path);
-            target.autoDelete();
-        } catch (Exception e) {
-            throw e;
-        }
-    }
-
-    public FSNode getNode(String path) throws Exception {
-        String nodes[] = splitPath(path);
         FSNode target = root;
+        for (String node : Arrays.copyOfRange(nodes, 0, nodes.length - 1)) {
+            target = target.getChild(node);
+            if (target == null) return false;
+        }
+        return target.addChild(nodes[nodes.length - 1]);
+    }
+
+    public boolean delNode(String path) {
+        FSNode target = getNode(path);
+        if (target == null) return false;
+        return target.autoDelete();
+    }
+
+    public FSNode getNode(String path) {
+        FSNode target = root;
+        String nodes[] = splitPath(path);
         for (String node : nodes) {
             target = target.getChild(node);
-            if (target == null) throw new Exception("no such file or directory ‘" + path + "’");
+            if (target == null) return null;
         }
         return target;
     }
@@ -56,12 +47,6 @@ public class FSTree {
         System.out.println(absolutePath);
         for (FSNode node : current.getChilds())
             printTree(node, absolutePath + node.getName() + "/");
-    }
-
-    private boolean checkPath(String path) {
-        String valid_path = "^/([^/ ]+(/)?)+$";
-        if (path.matches(valid_path)) return true;
-        return false;
     }
 
     private String[] splitPath(String path) {
@@ -102,18 +87,19 @@ class FSNode {
         return childs.stream().map(FSNode::getName).collect(Collectors.toList());
     }
 
-    public void addChild(String name) {
+    public boolean addChild(String name) {
         FSNode child = new FSNode(name, this);
-        childs.add(child);
+        return childs.add(child);
     }
 
-    public void delChild(String name) {
+    public boolean delChild(String name) {
         FSNode child = getChild(name);
-        childs.remove(child);
+        if (child == null) return false;
+        return childs.remove(child);
     }
 
-    public void autoDelete() {
-        parent.childs.remove(this);
+    public boolean autoDelete() {
+        return parent.childs.remove(this);
     }
 
     public FSNode getChild(String name) {
