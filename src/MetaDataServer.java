@@ -1,4 +1,3 @@
-import java.rmi.Remote;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
@@ -7,22 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-interface MetaDataInterface extends Remote {
-    // CALLS FROM STORAGE SERVER
-    void addStorageServer(String hostname, String top_dir) throws Exception;
-
-    void delStorageServer(String top_dir) throws Exception;
-
-    void addStorageItem(String item) throws Exception;
-
-    void delStorageItem(String item) throws Exception;
-
-    // CALLS FROM CLIENT
-    String find(String path) throws Exception;
-
-    Stat lstat(String path) throws Exception;
-}
 
 public class MetaDataServer implements MetaDataInterface {
     private static final Logger Log = Logger.getLogger(MetaDataServer.class.getName());
@@ -56,7 +39,6 @@ public class MetaDataServer implements MetaDataInterface {
             Log.log(Level.SEVERE, e.toString(), e);
             System.exit(1);
         }
-
     }
 
     // CALLS FROM STORAGE SERVER
@@ -71,8 +53,8 @@ public class MetaDataServer implements MetaDataInterface {
             throw new Exception("top directory already in use ‘" + top_dir + "’");
         }
         if (!FileSystem.addNode(top_dir)) {
-            Log.log(Level.SEVERE, "no such file or directory ‘" + top_dir + "’");
-            throw new Exception("no such file or directory ‘" + top_dir + "’");
+            Log.log(Level.SEVERE, "could not add new storage server on ‘" + top_dir + "’");
+            throw new Exception("could not add new storage server on ‘" + top_dir + "’");
         }
         StorageServers.put(top_dir, hostname);
         Log.log(Level.INFO, hostname + ", " + top_dir);
@@ -89,8 +71,8 @@ public class MetaDataServer implements MetaDataInterface {
             throw new Exception("top directory not found ‘" + top_dir + "’");
         }
         if (!FileSystem.delNode(top_dir)) {
-            Log.log(Level.SEVERE, "no such file or directory ‘" + top_dir + "’");
-            throw new Exception("no such file or directory ‘" + top_dir + "’");
+            Log.log(Level.SEVERE, "could not remove storage server on ‘" + top_dir + "’");
+            throw new Exception("could not remove storage server on ‘" + top_dir + "’");
         }
         StorageServers.remove(top_dir);
         Log.log(Level.INFO, top_dir);
