@@ -1,23 +1,11 @@
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.rmi.Remote;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-interface StorageInterface extends Remote {
-    // CALLS FROM CLIENT
-    void create(String path) throws Exception;
-
-    void create(String path, String blob) throws Exception;
-
-    void del(String path) throws Exception;
-
-    File get(String path) throws Exception;
-}
 
 public class StorageServer implements StorageInterface {
     private static final Logger Log = Logger.getLogger(StorageServer.class.getName());
@@ -60,7 +48,6 @@ public class StorageServer implements StorageInterface {
 
     // ON STARTUP
     private static void init(String hostname, String local_path, String filesystem_path) throws Exception {
-        // On startup
         // Example: init("/home/student/courses", "/courses"); -> Local dir maps into global namespace
         //                                                        Must call add_storage_server on the metadata server
         if (!checkPath(local_path)) {
