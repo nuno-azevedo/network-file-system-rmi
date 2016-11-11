@@ -1,7 +1,13 @@
-package PACKAGE_NAME;
+import java.io.File;
+import java.rmi.Remote;
 
-/**
- * Created by nuno- on 10-11-2016.
- */
-public interface StorageInterface {
+public interface StorageInterface extends Remote {
+    // CALLS FROM CLIENT
+    void create(String path) throws Exception;
+
+    void create(String path, String blob) throws Exception;
+
+    void del(String path) throws Exception;
+
+    File get(String path) throws Exception;
 }
