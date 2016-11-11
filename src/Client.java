@@ -1,11 +1,13 @@
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.HashMap;
 import java.util.Scanner;
 
 public class Client {
+    private static Registry registry;
     private static MetaDataInterface MetaData;
-    private static StorageInterface Storage;
+    private static HashMap<String, StorageInterface> StorageServers;
     private static String LocalPath;
     private static String CurrentDir;
 
@@ -20,9 +22,8 @@ public class Client {
         }
 
         try {
-            Registry registry = LocateRegistry.getRegistry();
+            registry = LocateRegistry.getRegistry();
             MetaData = (MetaDataInterface) registry.lookup("MetaData");
-            Storage = (StorageInterface) registry.lookup("Storage");
         } catch (Exception e) {
             System.err.println(e.toString());
             System.exit(1);
@@ -32,7 +33,7 @@ public class Client {
         Scanner scan = new Scanner(System.in);
         String cmd = new String();
         while (!cmd.equals("exit")) {
-            System.out.print("$> ");
+            System.out.print(CurrentDir + "$ ");
             cmd = scan.nextLine();
             parse(cmd);
         }
@@ -45,47 +46,43 @@ public class Client {
         }
         else if (cmd_list[0].equals("pwd")) {
             if (cmd_list.length == 1) pwd();
-            else System.err.println("pwd: too many arguments");
+            else System.err.println(cmd_list[0] + ": too many arguments");
         }
         else if (cmd_list[0].equals("ls")) {
-            if (cmd_list.length == 1) ls();
+            if (cmd_list.length == 1) ls(CurrentDir);
             else if (cmd_list.length == 2) ls(cmd_list[1]);
-            else System.err.println("ls: too many arguments");
+            else System.err.println(cmd_list[0] + ": too many arguments");
         }
         else if (cmd_list[0].equals("cd")) {
-            if (cmd_list.length == 1) cd();
+            if (cmd_list.length == 1) cd("~");
             else if (cmd_list.length == 2) cd(cmd_list[1]);
-            else System.err.println("cd: too many arguments");
+            else System.err.println(cmd_list[0] + ": too many arguments");
         }
         else if (cmd_list[0].equals("mkdir")) {
-            if (cmd_list.length < 2) System.err.println("mkdir: missing arguments");
+            if (cmd_list.length == 1) System.err.println(cmd_list[0] + ": missing arguments");
             else if (cmd_list.length == 2) mkdir(cmd_list[1]);
-            else System.err.println("mkdir: too many arguments");
+            else System.err.println(cmd_list[0] + ": too many arguments");
         }
         else if (cmd_list[0].equals("mv")) {
-            if (cmd_list.length < 3) System.err.println("mv: missing arguments");
+            if (cmd_list.length < 3) System.err.println(cmd_list[0] + ": missing arguments");
             else if (cmd_list.length == 3) mv(cmd_list[1], cmd_list[2]);
-            else System.err.println("mv: too many arguments");
+            else System.err.println(cmd_list[0] + ": too many arguments");
         }
         else if (cmd_list[0].equals("open")) {
-            if (cmd_list.length < 2) System.err.println("open: missing arguments");
+            if (cmd_list.length == 1) System.err.println(cmd_list[0] + ": missing arguments");
             else if (cmd_list.length == 2) open(cmd_list[1]);
-            else System.err.println("open: too many arguments");
+            else System.err.println(cmd_list[0] + ": too many arguments");
         }
         else if (cmd_list[0].equals("touch")) {
-            if (cmd_list.length < 3) System.err.println("touch: missing arguments");
+            if (cmd_list.length < 3) System.err.println(cmd_list[0] + ": missing arguments");
             else if (cmd_list.length == 3) touch(cmd_list[1], cmd_list[2]);
-            else System.err.println("touch: too many arguments");
+            else System.err.println(cmd_list[0] + ": too many arguments");
         }
-        else System.err.println("command not found");
+        else System.err.println(cmd_list[0] + ": command not found");
     }
 
     private static void pwd() {
         System.out.println(CurrentDir);
-    }
-
-    private static void ls() {
-        ls(CurrentDir);
     }
 
     private static void ls(String dir) {
@@ -97,27 +94,42 @@ public class Client {
         }
     }
 
-    private static void cd() {
-        cd("/");
-    }
-
     private static void cd(String dir) {
         // Changes the current directory to dir
         // dir can be a simple name or absolute or relative path
+        try {
+            MetaData.find(dir);
+        } catch (Exception e) {
+            System.out.println(e.toString());
+            return;
+        }
         CurrentDir = dir;
     }
 
     private static void mkdir(String dir) {
         try {
-            Storage.create(dir);
+            String server = MetaData.find(dir);
+            StorageInterface stub = StorageServers.get(server);
+            if (stub == null) {
+                stub = (StorageInterface) registry.lookup(server);
+                StorageServers.put(server, stub);
+            }
+            stub.create(dir);
         } catch (Exception e) {
             System.out.println(e.toString());
+            return;
         }
     }
 
     private static void touch(String file, String blob) {
         try {
-            Storage.create(file, blob);
+            String server = MetaData.find(file);
+            StorageInterface stub = StorageServers.get(server);
+            if (stub == null) {
+                stub = (StorageInterface) registry.lookup(server);
+                StorageServers.put(server, stub);
+            }
+            stub.create(file, blob);
         } catch (Exception e) {
             System.out.println(e.toString());
         }
@@ -131,6 +143,10 @@ public class Client {
     private static void open(String file) {
         // Opens the file with the proper application, accordingly to its extension
         // file can be a simple name or absolute or relative path
+    }
+
+    private static String parsePath(String path) {
+        return path;
     }
 
     private static String[] splitPath(String path) {
