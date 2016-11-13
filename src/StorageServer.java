@@ -1,10 +1,7 @@
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
+import java.io.*;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -31,14 +28,14 @@ public class StorageServer implements StorageInterface {
             MetaData = (MetaDataInterface) registry.lookup(args[3]);
             init(args[0], args[1], args[2]);
 
-            Scanner scan = new Scanner(System.in);
-            while (!scan.nextLine().equals("exit"));
+            BufferedReader systemIn = new BufferedReader(new InputStreamReader(System.in));
+            while(systemIn.readLine() != null);
 
             close(args[0], args[1], args[2]);
             registry.unbind(args[0]);
             System.exit(0);
         } catch (Exception e) {
-            Log.log(Level.SEVERE, e.getMessage(), e);
+            Log.log(Level.SEVERE, e.getMessage());
             System.exit(1);
         }
     }
@@ -54,22 +51,18 @@ public class StorageServer implements StorageInterface {
         try {
             MetaData.addStorageServer(hostname, filesystem_path);
         } catch (Exception e) {
-            Log.log(Level.SEVERE, e.getMessage(), e);
+            Log.log(Level.SEVERE, e.getMessage());
             throw e;
         }
         LocalPath = local_path;
         File local_dir = new File(local_path + filesystem_path);
         if (!local_dir.exists() && !local_dir.mkdirs()) {
-            try {
-                MetaData.delStorageServer(hostname, filesystem_path);
-            } catch (Exception e) { }
+            try { MetaData.delStorageServer(hostname, filesystem_path); } catch (Exception e) { }
             Log.log(Level.SEVERE, "cannot init storage server ‘" + hostname + "’: failed to create local directory ‘" + local_path + "’");
             throw new Exception("cannot init storage server ‘" + hostname + "’: failed to create local directory ‘" + local_path + "’");
         }
         if (!local_dir.isDirectory()) {
-            try {
-                MetaData.delStorageServer(hostname, filesystem_path);
-            } catch (Exception e) { }
+            try { MetaData.delStorageServer(hostname, filesystem_path); } catch (Exception e) { }
             Log.log(Level.SEVERE, "cannot init storage server ‘" + hostname + "’: not a directory ‘" + local_path + "’");
             throw new Exception("cannot init storage server ‘" + hostname + "’: not a directory ‘" + local_path + "’");
         }
@@ -88,7 +81,7 @@ public class StorageServer implements StorageInterface {
         try {
             MetaData.delStorageServer(hostname, filesystem_path);
         } catch (Exception e) {
-            Log.log(Level.SEVERE, e.getMessage(), e);
+            Log.log(Level.SEVERE, e.getMessage());
             throw e;
         }
         Log.log(Level.INFO, local_path + ", " + filesystem_path);
@@ -100,21 +93,17 @@ public class StorageServer implements StorageInterface {
         try {
             MetaData.addStorageItem(path, NodeType.Dir);
         } catch (Exception e) {
-            Log.log(Level.SEVERE, e.getMessage(), e);
+            Log.log(Level.SEVERE, e.getMessage());
             throw e;
         }
         File dir = new File(LocalPath + path);
         if (dir.exists()) {
-            try {
-                MetaData.delStorageItem(path);
-            } catch (Exception e) { }
+            try { MetaData.delStorageItem(path); } catch (Exception e) { }
             Log.log(Level.SEVERE, "cannot create directory ‘" + path + "’: file exists");
             throw new Exception("cannot create directory ‘" + path + "’: file exists");
         }
         if (!dir.mkdir()) {
-            try {
-                MetaData.delStorageItem(path);
-            } catch (Exception e) { }
+            try { MetaData.delStorageItem(path); } catch (Exception e) { }
             Log.log(Level.SEVERE, "cannot create directory ‘" + path + "’: failed to create");
             throw new Exception("cannot create directory ‘" + path + "’: failed to create");
         }
@@ -126,31 +115,31 @@ public class StorageServer implements StorageInterface {
         try {
             MetaData.addStorageItem(path, NodeType.File);
         } catch (Exception e) {
-            Log.log(Level.SEVERE, e.getMessage(), e);
+            Log.log(Level.SEVERE, e.getMessage());
             throw e;
         }
         File file = new File(LocalPath + path);
         if (!file.exists() && !file.createNewFile()) {
-            try {
-                MetaData.delStorageItem(path);
-            } catch (Exception e) { }
+            try { MetaData.delStorageItem(path); } catch (Exception e) { }
             Log.log(Level.SEVERE, "cannot create file ‘" + path + "’: failed to create");
             throw new Exception("cannot create file ‘" + path + "’: failed to create");
         }
         if (file.isDirectory()) {
-            try {
-                MetaData.delStorageItem(path);
-            } catch (Exception e) { }
+            try { MetaData.delStorageItem(path); } catch (Exception e) { }
             Log.log(Level.SEVERE, "cannot create file ‘" + path + "’: not a file");
             throw new Exception("cannot create file ‘" + path + "’: not a file");
         }
+        BufferedWriter writer = null;
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+            writer = new BufferedWriter(new FileWriter(file));
             writer.write(blob);
-            writer.close();
         } catch (Exception e) {
             Log.log(Level.SEVERE, "cannot write to file ‘" + path + "’: failed to write");
             throw new Exception("cannot write to file ‘" + path + "’: failed to write");
+        } finally {
+            if (writer != null) {
+                try { writer.close(); } catch (Exception e) { }
+            }
         }
         Log.log(Level.INFO, path);
     }
@@ -161,7 +150,7 @@ public class StorageServer implements StorageInterface {
         try {
             MetaData.delStorageItem(path);
         } catch (Exception e) {
-            Log.log(Level.SEVERE, e.getMessage(), e);
+            Log.log(Level.SEVERE, e.getMessage());
             throw e;
         }
         File target = new File(LocalPath + path);
@@ -198,14 +187,12 @@ public class StorageServer implements StorageInterface {
         try {
             String path = f.getPath().replace(LocalPath, "");
             if (checkTopPath(path));
+            else if (f.isFile()) MetaData.addStorageItem(path, NodeType.File);
             else if (f.isDirectory()) MetaData.addStorageItem(path, NodeType.Dir);
-            else MetaData.addStorageItem(path, NodeType.File);
         } catch (Exception e) { }
-        if (f.isDirectory()) {
-            for (File c : f.listFiles()) {
+        if (f.isDirectory())
+            for (File c : f.listFiles())
                 addRecursive(c);
-            }
-        }
     }
 
     private static boolean delRecursive(File f) {
