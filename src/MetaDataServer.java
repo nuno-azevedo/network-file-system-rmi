@@ -92,6 +92,10 @@ public class MetaDataServer implements MetaDataInterface {
             Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: invalid path");
             throw new Exception("cannot add item ‘" + item + "’: invalid path");
         }
+        if (type == NodeType.File && !checkExtension(item)) {
+            Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: file extension not found");
+            throw new Exception("cannot add item ‘" + item + "’: file extension not found");
+        }
         if (!FileSystem.addNode(item, type)) {
             if (FileSystem.getNode(item).isDir() || (FileSystem.getNode(item).isFile() && type == NodeType.Dir)) {
                 Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: file exists");
@@ -183,15 +187,22 @@ public class MetaDataServer implements MetaDataInterface {
         return target != null && target.isFile();
     }
 
+    private boolean checkExtension(String path) {
+        if (!path.contains(".")) return false;
+        String prefix = path.substring(path.lastIndexOf("/") + 1, path.lastIndexOf("."));
+        String sufix = path.substring(path.lastIndexOf(".") + 1);
+        return !prefix.equals("") && !sufix.equals("");
+    }
+
     private boolean checkAbsPath(String path) {
-        String valid_path = "^/((?!/\\.{2,}(/|$)|//).)*(?<!/)$";
-        if (path.matches(valid_path)) return true;
+        String valid_abs_path = "^/((?!/\\.{2,}(/|$)|//).)*(?<!/)$";
+        if (path.matches(valid_abs_path)) return true;
         return false;
     }
 
-    private boolean checkTopPath(String top_dir) {
+    private boolean checkTopPath(String path) {
         String valid_top_dir = "^/((?!/\\.{2,}(/|$)|//|/).)*$";
-        if (top_dir.matches(valid_top_dir)) return true;
+        if (path.matches(valid_top_dir)) return true;
         return false;
     }
 
