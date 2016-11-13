@@ -4,9 +4,9 @@ public interface MetaDataInterface extends Remote {
     // CALLS FROM STORAGE SERVER
     void addStorageServer(String hostname, String top_dir) throws Exception;
 
-    void delStorageServer(String top_dir) throws Exception;
+    void delStorageServer(String hostname, String top_dir) throws Exception;
 
-    void addStorageItem(String item) throws Exception;
+    void addStorageItem(String item, NodeType nodeType) throws Exception;
 
     void delStorageItem(String item) throws Exception;
 
