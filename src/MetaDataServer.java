@@ -1,10 +1,11 @@
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -30,17 +31,18 @@ public class MetaDataServer implements MetaDataInterface {
             MetaDataInterface stub = (MetaDataInterface) UnicastRemoteObject.exportObject(obj, 0);
             Registry registry = LocateRegistry.getRegistry();
             registry.bind(args[0], stub);
+
             Hostname = args[0];
 
-            Scanner scan = new Scanner(System.in);
-            while (!scan.nextLine().equals("exit"));
+            BufferedReader systemIn = new BufferedReader(new InputStreamReader(System.in));
+            while(systemIn.readLine() != null);
 
             registry.unbind(args[0]);
-            System.exit(0);
         } catch (Exception e) {
-            Log.log(Level.SEVERE, e.getMessage(), e);
+            Log.log(Level.SEVERE, e.getMessage());
             System.exit(1);
         }
+        System.exit(0);
     }
 
     // CALLS FROM STORAGE SERVER
@@ -80,7 +82,7 @@ public class MetaDataServer implements MetaDataInterface {
         Log.log(Level.INFO, hostname + ", " + top_dir);
     }
 
-    public void addStorageItem(String item, NodeType nodeType) throws Exception {
+    public void addStorageItem(String item, NodeType type) throws Exception {
         // Example: addStorageItem("/courses/video1.avi");
         if (checkTopPath(item)) {
             Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: not allowed on root directory");
@@ -90,9 +92,11 @@ public class MetaDataServer implements MetaDataInterface {
             Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: invalid path");
             throw new Exception("cannot add item ‘" + item + "’: invalid path");
         }
-        if (!FileSystem.addNode(item, nodeType)) {
-            Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: file exists");
-            throw new Exception("cannot add item ‘" + item + "’: file exists");
+        if (!FileSystem.addNode(item, type)) {
+            if (FileSystem.getNode(item).isDir() || (FileSystem.getNode(item).isFile() && type == NodeType.Dir)) {
+                Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: file exists");
+                throw new Exception("cannot add item ‘" + item + "’: file exists");
+            }
         }
         Log.log(Level.INFO, item);
     }
@@ -141,9 +145,9 @@ public class MetaDataServer implements MetaDataInterface {
     public Stat lstat(String item) throws Exception {
         // Example: lstat("/courses"); -> { "machine1.dcc.fc.up.pt", { "afile.txt", "bfile.txt", "..." } }
         if (item.equals("/")) {
-            List<String> storage_hosts = new ArrayList<String>();
-            storage_hosts.addAll(StorageServers.keySet());
-            return new Stat(Hostname, storage_hosts);
+            List<String> storages = new ArrayList<String>();
+            storages.addAll(StorageServers.keySet());
+            return new Stat(Hostname, storages);
         }
         if (!checkAbsPath(item)) {
             Log.log(Level.SEVERE, "cannot access item ‘" + item + "’: invalid path");
@@ -164,9 +168,19 @@ public class MetaDataServer implements MetaDataInterface {
         return new Stat(storage, target.getChildsNames());
     }
 
-    public boolean checkExists(String item) {
+    public boolean checkExists(String item) throws Exception {
         FSNode target = FileSystem.getNode(item);
         return target != null;
+    }
+
+    public boolean isDir(String item) throws Exception {
+        FSNode target = FileSystem.getNode(item);
+        return target != null && target.isDir();
+    }
+
+    public boolean isFile(String item) throws Exception {
+        FSNode target = FileSystem.getNode(item);
+        return target != null && target.isFile();
     }
 
     private boolean checkAbsPath(String path) {
