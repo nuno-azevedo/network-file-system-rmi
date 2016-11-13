@@ -134,7 +134,7 @@ public class Client {
             java.util.Collections.sort(stat.items);
             for (int i = 0; i < stat.items.size(); i++) {
                 if (i % 5 == 0 && i != 0) System.out.println();
-                System.out.print(stat.items.get(i) + "\t");
+                System.out.print(stat.items.get(i).replace("/", "") + "\t");
             }
             System.out.println();
         } catch (Exception e) {
@@ -168,6 +168,10 @@ public class Client {
 
     private static void mkdir(String dir) {
         String path = parsePath(dir);
+        if (checkTopPath(path)) {
+            System.out.println("cannot create directory ‘" + dir + "’: not allowed on root directory");
+            return;
+        }
         try {
             String top_dir = getTopPath(path);
             String server = MetaData.find(top_dir);
@@ -181,6 +185,10 @@ public class Client {
 
     private static void touch(String file) {
         String path = parsePath(file);
+        if (checkTopPath(path)) {
+            System.out.println("cannot create file ‘" + file + "’: not allowed on root directory");
+            return;
+        }
         try {
             String top_dir = getTopPath(path);
             String server = MetaData.find(top_dir);
@@ -194,6 +202,10 @@ public class Client {
 
     private static void nano(String file) {
         String path = parsePath(file);
+        if (checkTopPath(path)) {
+            System.out.println("cannot create file ‘" + file + "’: not allowed on root directory");
+            return;
+        }
         try {
             String top_dir = getTopPath(path);
             String server = MetaData.find(top_dir);
@@ -216,6 +228,10 @@ public class Client {
 
     private static void rm(String item) {
         String path = parsePath(item);
+        if (checkTopPath(path)) {
+            System.out.println("cannot delete item ‘" + item + "’: not allowed on root directory");
+            return;
+        }
         try {
             String top_dir = getTopPath(path);
             String server = MetaData.find(top_dir);
@@ -230,13 +246,18 @@ public class Client {
     private static void open(String file) {
         // Opens the file with the proper application, accordingly to its extension
         // file can be a simple name or absolute or relative path
-        if (!file.contains(".")) {
-            System.out.println("cannot open file ‘" + file + "’: extension not found");
+        String path = parsePath(file);
+        if (checkTopPath(path)) {
+            System.out.println("cannot open file ‘" + file + "’: not allowed on root directory");
             return;
         }
         String extension = file.substring(file.lastIndexOf(".") + 1);
         try {
             String application = Applications.get(extension);
+            if (application == null) {
+                System.out.println("cannot open file ‘" + file + "’: unknown file extension");
+                return;
+            }
             Process process = Runtime.getRuntime().exec(new String[] { application, file });
             process.waitFor();
         } catch (Exception e) {
@@ -262,6 +283,12 @@ public class Client {
         }
         if (parsed.size() == 0) return "/";
         return String.join("", parsed);
+    }
+
+    private static boolean checkTopPath(String top_dir) {
+        String valid_top_dir = "^/((?!/\\.{2,}(/|$)|//|/).)*$";
+        if (top_dir.matches(valid_top_dir)) return true;
+        return false;
     }
 
     private static String getTopPath(String path) {
