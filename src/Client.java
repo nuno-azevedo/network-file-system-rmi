@@ -58,7 +58,7 @@ public class Client {
                 line = reader.readLine();
             }
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            System.err.println(e.getMessage());
         } finally {
             if (reader != null) {
                 try { reader.close(); } catch (Exception e) { }
@@ -138,7 +138,7 @@ public class Client {
             }
             System.out.println();
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.err.println(e.getMessage());
             return;
         }
     }
@@ -153,11 +153,11 @@ public class Client {
         }
         try {
             if (!MetaData.checkExists(path)) {
-                System.out.println("cannot change to directory ‘" + dir + "’: no such file or directory");
+                System.err.println("cannot change to directory ‘" + dir + "’: no such file or directory");
                 return;
             }
             if (!MetaData.isDir(path)) {
-                System.out.println("cannot change to directory ‘" + dir + "’: not a directory");
+                System.err.println("cannot change to directory ‘" + dir + "’: not a directory");
                 return;
             }
         } catch (Exception e) {
@@ -169,7 +169,7 @@ public class Client {
     private static void mkdir(String dir) {
         String path = parsePath(dir);
         if (checkTopPath(path)) {
-            System.out.println("cannot create directory ‘" + dir + "’: not allowed on root directory");
+            System.err.println("cannot create directory ‘" + dir + "’: not allowed on root directory");
             return;
         }
         try {
@@ -178,7 +178,7 @@ public class Client {
             StorageInterface stub = (StorageInterface) registry.lookup(server);
             stub.create(path);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.err.println(e.getMessage());
             return;
         }
     }
@@ -186,7 +186,7 @@ public class Client {
     private static void touch(String file) {
         String path = parsePath(file);
         if (checkTopPath(path)) {
-            System.out.println("cannot create file ‘" + file + "’: not allowed on root directory");
+            System.err.println("cannot create file ‘" + file + "’: not allowed on root directory");
             return;
         }
         try {
@@ -195,7 +195,7 @@ public class Client {
             StorageInterface stub = (StorageInterface) registry.lookup(server);
             stub.create(path, new String());
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.err.println(e.getMessage());
             return;
         }
     }
@@ -203,7 +203,7 @@ public class Client {
     private static void nano(String file) {
         String path = parsePath(file);
         if (checkTopPath(path)) {
-            System.out.println("cannot create file ‘" + file + "’: not allowed on root directory");
+            System.err.println("cannot create file ‘" + file + "’: not allowed on root directory");
             return;
         }
         try {
@@ -216,7 +216,7 @@ public class Client {
                 blob = blob.concat(line).concat("\n");
             stub.create(path, blob);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.err.println(e.getMessage());
             return;
         }
     }
@@ -229,7 +229,7 @@ public class Client {
     private static void rm(String item) {
         String path = parsePath(item);
         if (checkTopPath(path)) {
-            System.out.println("cannot delete item ‘" + item + "’: not allowed on root directory");
+            System.err.println("cannot delete item ‘" + item + "’: not allowed on root directory");
             return;
         }
         try {
@@ -238,7 +238,7 @@ public class Client {
             StorageInterface stub = (StorageInterface) registry.lookup(server);
             stub.del(path);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.err.println(e.getMessage());
             return;
         }
     }
@@ -248,20 +248,20 @@ public class Client {
         // file can be a simple name or absolute or relative path
         String path = parsePath(file);
         if (checkTopPath(path)) {
-            System.out.println("cannot open file ‘" + file + "’: not allowed on root directory");
+            System.err.println("cannot open file ‘" + file + "’: not allowed on root directory");
             return;
         }
         String extension = file.substring(file.lastIndexOf(".") + 1);
         try {
             String application = Applications.get(extension);
             if (application == null) {
-                System.out.println("cannot open file ‘" + file + "’: unknown file extension");
+                System.err.println("cannot open file ‘" + file + "’: unknown file extension");
                 return;
             }
             Process process = Runtime.getRuntime().exec(new String[] { application, file });
             process.waitFor();
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.err.println(e.getMessage());
             return;
         }
     }
