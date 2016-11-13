@@ -97,6 +97,10 @@ public class MetaDataServer implements MetaDataInterface {
             throw new Exception("cannot add item ‘" + item + "’: file extension not found");
         }
         if (!FileSystem.addNode(item, type)) {
+            if (FileSystem.getNode(item) == null) {
+                Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: no such file or directory");
+                throw new Exception("cannot add item ‘" + item + "’: no such file or directory");
+            }
             if (FileSystem.getNode(item).isDir() || (FileSystem.getNode(item).isFile() && type == NodeType.Dir)) {
                 Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: file exists");
                 throw new Exception("cannot add item ‘" + item + "’: file exists");
