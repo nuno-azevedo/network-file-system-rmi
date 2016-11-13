@@ -147,6 +147,10 @@ public class Client {
         // Changes the current directory to dir
         // dir can be a simple name or absolute or relative path
         String path = parsePath(dir);
+        if (path.equals("/")) {
+            CurrentDir = path;
+            return;
+        }
         try {
             if (!MetaData.checkExists(path)) {
                 System.out.println("cannot change to directory ‘" + dir + "’: no such file or directory");
@@ -196,9 +200,8 @@ public class Client {
             StorageInterface stub = (StorageInterface) registry.lookup(server);
             BufferedReader systemIn = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
             String line, blob = new String();
-            while((line = systemIn.readLine()) != null) {
+            while((line = systemIn.readLine()) != null)
                 blob = blob.concat(line).concat("\n");
-            }
             stub.create(path, blob);
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -247,19 +250,18 @@ public class Client {
             if (CurrentDir.endsWith("/")) path = CurrentDir + path;
             else path = CurrentDir + "/" + path;
         }
-        if (path.equals("/.")) return CurrentDir;
         List<String> parsed = new ArrayList<String>();
         String nodes[] = splitPath(path);
         for (String node : nodes) {
             if (node.equals("/."));
             else if (node.equals("/..")) {
-                if (parsed.size() > 1) parsed.remove(parsed.size() - 1);
-                else if (parsed.size() == 1) parsed.set(0, "/");
-                else return path;
+                if (parsed.size() > 0) parsed.remove(parsed.size() - 1);
+                else return new String();
             }
             else parsed.add(node);
         }
-        return String.join("", parsed).replaceAll("//", "/");
+        if (parsed.size() == 0) return "/";
+        return String.join("", parsed);
     }
 
     private static String getTopPath(String path) {
