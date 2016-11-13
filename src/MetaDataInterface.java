@@ -11,7 +11,13 @@ public interface MetaDataInterface extends Remote {
     void delStorageItem(String item) throws Exception;
 
     // CALLS FROM CLIENT
-    String find(String path) throws Exception;
+    String find(String item) throws Exception;
 
-    Stat lstat(String path) throws Exception;
+    Stat lstat(String item) throws Exception;
+
+    boolean checkExists(String item) throws Exception;
+
+    boolean isDir(String item) throws Exception;
+
+    boolean isFile(String item) throws Exception;
 }
