@@ -86,6 +86,10 @@ class FSNode {
         return name;
     }
 
+    public NodeType getType() {
+        return type;
+    }
+
     public FSNode getParent() {
         return parent;
     }
