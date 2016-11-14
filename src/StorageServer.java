@@ -11,32 +11,39 @@ public class StorageServer implements StorageInterface {
     private static String LocalPath;
 
     private StorageServer() {
-
+        this.MetaData = null;
+        this.LocalPath = new String();
     }
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String args[]) {
         if (args.length != 4) {
             System.err.println("USAGE: java StorageServer $HOSTNAME $LOCAL_PATH $FILESYSTEM_PATH $METADATA_HOSTNAME");
             System.exit(1);
         }
 
+        Registry registry = null;
         try {
             StorageServer obj = new StorageServer();
             StorageInterface stub = (StorageInterface) UnicastRemoteObject.exportObject(obj, 0);
-            Registry registry = LocateRegistry.getRegistry();
+            registry = LocateRegistry.getRegistry();
             registry.bind(args[0], stub);
             MetaData = (MetaDataInterface) registry.lookup(args[3]);
             init(args[0], args[1], args[2]);
 
-            BufferedReader systemIn = new BufferedReader(new InputStreamReader(System.in));
-            while(systemIn.readLine() != null);
-
-            close(args[0], args[1], args[2]);
-            registry.unbind(args[0]);
-            System.exit(0);
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            while(br.readLine() != null);
         } catch (Exception e) {
-            Log.log(Level.SEVERE, e.getMessage());
-            System.exit(1);
+            e.printStackTrace();
+        } finally {
+            try {
+                if (MetaData != null) close(args[0], args[1], args[2]);
+                if (registry != null) registry.unbind(args[0]);
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(1);
+            }
+            if (MetaData == null || registry == null) System.exit(1);
+            System.exit(0);
         }
     }
 
@@ -45,29 +52,23 @@ public class StorageServer implements StorageInterface {
         // Example: init("/home/student/courses", "/courses"); -> Local dir maps into global namespace
         //                                                        Must call add_storage_server on the metadata server
         if (!checkAbsPath(local_path)) {
-            Log.log(Level.SEVERE, "cannot init storage server ‘" + hostname + "’: invalid local directory ‘" + local_path + "’");
             throw new Exception("cannot init storage server ‘" + hostname + "’: invalid local directory ‘" + local_path + "’");
         }
         try {
             MetaData.addStorageServer(hostname, filesystem_path);
         } catch (Exception e) {
-            Log.log(Level.SEVERE, e.getMessage());
             throw e;
         }
         LocalPath = local_path;
         File local_dir = new File(local_path + filesystem_path);
         if (!local_dir.exists() && !local_dir.mkdirs()) {
-            try { MetaData.delStorageServer(hostname, filesystem_path); } catch (Exception e) { }
-            Log.log(Level.SEVERE, "cannot init storage server ‘" + hostname + "’: failed to create local directory ‘" + local_path + "’");
             throw new Exception("cannot init storage server ‘" + hostname + "’: failed to create local directory ‘" + local_path + "’");
         }
         if (!local_dir.isDirectory()) {
-            try { MetaData.delStorageServer(hostname, filesystem_path); } catch (Exception e) { }
-            Log.log(Level.SEVERE, "cannot init storage server ‘" + hostname + "’: not a directory ‘" + local_path + "’");
             throw new Exception("cannot init storage server ‘" + hostname + "’: not a directory ‘" + local_path + "’");
         }
         addRecursive(local_dir);
-        Log.log(Level.INFO, local_path + ", " + filesystem_path);
+        Log.log(Level.INFO, hostname + ", " + local_path + ", " + filesystem_path);
     }
 
     // ON CLOSE
@@ -75,143 +76,152 @@ public class StorageServer implements StorageInterface {
         // Example: close("/home/student/courses"); -> Closes local share
         //                                             Must call del_storage_server on the metadata server
         if (!checkAbsPath(local_path)) {
-            Log.log(Level.SEVERE, "cannot close storage server ‘" + hostname + "’: invalid local directory ‘" + local_path + "’");
             throw new Exception("cannot close storage server ‘" + hostname + "’: invalid local directory ‘" + local_path + "’");
         }
         try {
             MetaData.delStorageServer(hostname, filesystem_path);
         } catch (Exception e) {
-            Log.log(Level.SEVERE, e.getMessage());
             throw e;
         }
-        Log.log(Level.INFO, local_path + ", " + filesystem_path);
+        Log.log(Level.INFO, hostname + ", " + local_path + ", " + filesystem_path);
     }
 
     // CALLS FROM CLIENT
-    public void create(String path) throws Exception {
+    public void create(String item) throws Exception {
         // Example: create("/courses"); -> Creates a directory
         try {
-            MetaData.addStorageItem(path, NodeType.Dir);
+            MetaData.addStorageItem(item, NodeType.Dir);
         } catch (Exception e) {
             Log.log(Level.SEVERE, e.getMessage());
             throw e;
         }
-        File dir = new File(LocalPath + path);
+        File dir = new File(LocalPath + item);
         if (dir.exists()) {
-            try { MetaData.delStorageItem(path); } catch (Exception e) { }
-            Log.log(Level.SEVERE, "cannot create directory ‘" + path + "’: file exists");
-            throw new Exception("cannot create directory ‘" + path + "’: file exists");
+            try { MetaData.delStorageItem(item); } catch (Exception e) { }
+            Log.log(Level.SEVERE, "cannot create directory ‘" + item + "’: file exists");
+            throw new Exception("cannot create directory ‘" + item + "’: file exists");
         }
         if (!dir.mkdir()) {
-            try { MetaData.delStorageItem(path); } catch (Exception e) { }
-            Log.log(Level.SEVERE, "cannot create directory ‘" + path + "’: failed to create");
-            throw new Exception("cannot create directory ‘" + path + "’: failed to create");
+            try { MetaData.delStorageItem(item); } catch (Exception e) { }
+            Log.log(Level.SEVERE, "cannot create directory ‘" + item + "’: failed to create");
+            throw new Exception("cannot create directory ‘" + item + "’: failed to create");
         }
-        Log.log(Level.INFO, path);
+        Log.log(Level.INFO, item);
     }
 
-    public void create(String path, String blob) throws Exception {
+    public void create(String item, byte bytes[]) throws Exception {
         // Example: create("/courses/file1.txt", ”A line in a text”); -> Creates a file
         try {
-            MetaData.addStorageItem(path, NodeType.File);
+            MetaData.addStorageItem(item, NodeType.File);
         } catch (Exception e) {
             Log.log(Level.SEVERE, e.getMessage());
             throw e;
         }
-        File file = new File(LocalPath + path);
+        File file = new File(LocalPath + item);
         if (!file.exists() && !file.createNewFile()) {
-            try { MetaData.delStorageItem(path); } catch (Exception e) { }
-            Log.log(Level.SEVERE, "cannot create file ‘" + path + "’: failed to create");
-            throw new Exception("cannot create file ‘" + path + "’: failed to create");
+            Log.log(Level.SEVERE, "cannot create file ‘" + item + "’: failed to create");
+            throw new Exception("cannot create file ‘" + item + "’: failed to create");
         }
         if (file.isDirectory()) {
-            try { MetaData.delStorageItem(path); } catch (Exception e) { }
-            Log.log(Level.SEVERE, "cannot create file ‘" + path + "’: not a file");
-            throw new Exception("cannot create file ‘" + path + "’: not a file");
+            Log.log(Level.SEVERE, "cannot create file ‘" + item + "’: not a file");
+            throw new Exception("cannot create file ‘" + item + "’: not a file");
         }
-        BufferedWriter writer = null;
+        FileOutputStream fos = null;
         try {
-            writer = new BufferedWriter(new FileWriter(file));
-            writer.write(blob);
+            fos = new FileOutputStream(file);
+            fos.write(bytes);
         } catch (Exception e) {
-            Log.log(Level.SEVERE, "cannot write to file ‘" + path + "’: failed to write");
-            throw new Exception("cannot write to file ‘" + path + "’: failed to write");
+            Log.log(Level.SEVERE, "cannot write to file ‘" + item + "’: failed to write");
+            throw new Exception("cannot write to file ‘" + item + "’: failed to write");
         } finally {
-            if (writer != null) {
-                try { writer.close(); } catch (Exception e) { }
+            if (fos != null) {
+                try { fos.close(); } catch (Exception e) { }
             }
         }
-        Log.log(Level.INFO, path);
+        Log.log(Level.INFO, item);
     }
 
-    public void del(String path) throws Exception {
+    public void del(String item) throws Exception {
         // Example: del("/courses"); -> Removes sub-tree
         // Example: del("/courses/file1.txt"); -> Removes file
         try {
-            MetaData.delStorageItem(path);
+            MetaData.delStorageItem(item);
         } catch (Exception e) {
             Log.log(Level.SEVERE, e.getMessage());
             throw e;
         }
-        File target = new File(LocalPath + path);
+        File target = new File(LocalPath + item);
         if (!target.exists()) {
-            Log.log(Level.SEVERE, "cannot delete item ‘" + path + "’: no such file or directory");
-            throw new Exception("cannot delete item ‘" + path + "’: no such file or directory");
+            Log.log(Level.SEVERE, "cannot delete item ‘" + item + "’: no such file or directory");
+            throw new Exception("cannot delete item ‘" + item + "’: no such file or directory");
         }
         if (!delRecursive(target)) {
-            Log.log(Level.SEVERE, "cannot delete item ‘" + path + "’: failed to remove");
-            throw new Exception("cannot delete item ‘" + path + "’: failed to remove");
+            Log.log(Level.SEVERE, "cannot delete item ‘" + item + "’: failed to remove");
+            throw new Exception("cannot delete item ‘" + item + "’: failed to remove");
         }
-        Log.log(Level.INFO, path);
+        Log.log(Level.INFO, item);
     }
 
-    public File get(String path) throws Exception {
+    public byte[] get(String item) throws Exception {
         // Example: get("/courses/file1.txt"); -> Downloads the file
-        if (!checkAbsPath(path)) {
-            Log.log(Level.SEVERE, "cannot get item ‘" + path + "’: invalid path");
-            throw new Exception("cannot get item ‘" + path + "’: invalid path");
+        if (!checkAbsPath(item)) {
+            Log.log(Level.SEVERE, "cannot get item ‘" + item + "’: invalid path");
+            throw new Exception("cannot get item ‘" + item + "’: invalid path");
         }
-        File target = new File(LocalPath + path);
+        File target = new File(LocalPath + item);
         if (!target.exists()) {
-            Log.log(Level.SEVERE, "cannot get item ‘" + path + "’: no such file or directory");
-            throw new Exception("cannot get item ‘" + path + "’: no such file or directory");
+            Log.log(Level.SEVERE, "cannot get item ‘" + item + "’: no such file or directory");
+            throw new Exception("cannot get item ‘" + item + "’: no such file or directory");
         }
         if (target.isDirectory()) {
-            Log.log(Level.SEVERE, "cannot get item ‘" + path + "’: not a file");
-            throw new Exception("cannot get item ‘" + path + "’: not a file");
+            Log.log(Level.SEVERE, "cannot get item ‘" + item + "’: not a file");
+            throw new Exception("cannot get item ‘" + item + "’: not a file");
         }
-        return target;
+        byte bytes[] = new byte[(int) target.length()];
+        FileInputStream fis = null;
+        try {
+            fis = new FileInputStream(target);
+            fis.read(bytes);
+        }catch(Exception e) {
+            Log.log(Level.SEVERE, "cannot get item ‘" + item + "’: failed to read");
+            throw new Exception("cannot get item ‘" + item + "’: failed to read");
+        } finally {
+            if (fis != null) {
+                try { fis.close(); } catch (Exception e) { }
+            }
+        }
+        return bytes;
     }
 
-    private static void addRecursive(File f) {
+    private static void addRecursive(File file) {
         try {
-            String path = f.getPath().replace(LocalPath, "");
+            String path = file.getPath().replace(LocalPath, "");
             if (checkTopPath(path));
-            else if (f.isFile()) MetaData.addStorageItem(path, NodeType.File);
-            else if (f.isDirectory()) MetaData.addStorageItem(path, NodeType.Dir);
+            else if (file.isFile()) MetaData.addStorageItem(path, NodeType.File);
+            else if (file.isDirectory()) MetaData.addStorageItem(path, NodeType.Dir);
         } catch (Exception e) { }
-        if (f.isDirectory())
-            for (File c : f.listFiles())
+        if (file.isDirectory())
+            for (File c : file.listFiles())
                 addRecursive(c);
     }
 
-    private static boolean delRecursive(File f) {
-        System.out.println(f.getPath());
-        if (f.isDirectory())
-            for (File c : f.listFiles())
+    private static boolean delRecursive(File file) {
+        System.out.println(file.getPath());
+        if (file.isDirectory())
+            for (File c : file.listFiles())
                 delRecursive(c);
-        return f.delete();
+        return file.delete();
     }
 
-    private static boolean checkAbsPath(String path) {
-        String valid_path = "^/((?!/\\.{2,}(/|$)|//).)*(?<!/)$";
-        if (path.matches(valid_path)) return true;
+    private static boolean checkTopPath(String path) {
+        String valid_top_dir = "^/((?!/\\.{2,}(/|$)|//|/).)*$";
+        if (path.matches(valid_top_dir)) return true;
         return false;
     }
 
-    private static boolean checkTopPath(String top_dir) {
-        String valid_top_dir = "^/((?!/\\.{2,}(/|$)|//|/).)*$";
-        if (top_dir.matches(valid_top_dir)) return true;
+    private static boolean checkAbsPath(String path) {
+        String valid_abs_path = "^/((?!/\\.{2,}(/|$)|//).)*(?<!/)$";
+        if (path.matches(valid_abs_path)) return true;
         return false;
     }
 }
