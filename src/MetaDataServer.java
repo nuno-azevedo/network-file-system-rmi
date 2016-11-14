@@ -27,23 +27,28 @@ public class MetaDataServer implements MetaDataInterface {
             System.exit(1);
         }
 
+        Registry registry = null;
         try {
             MetaDataServer obj = new MetaDataServer();
             MetaDataInterface stub = (MetaDataInterface) UnicastRemoteObject.exportObject(obj, 0);
-            Registry registry = LocateRegistry.getRegistry();
+            registry = LocateRegistry.getRegistry();
             registry.bind(args[0], stub);
-
             Hostname = args[0];
 
-            BufferedReader systemIn = new BufferedReader(new InputStreamReader(System.in));
-            while(systemIn.readLine() != null);
-
-            registry.unbind(args[0]);
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            while (br.readLine() != null) ;
         } catch (Exception e) {
-            Log.log(Level.SEVERE, e.getMessage());
-            System.exit(1);
+            e.printStackTrace();
+        } finally {
+            try {
+                if (registry != null) registry.unbind(args[0]);
+                else System.exit(1);
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(1);
+            }
+            System.exit(0);
         }
-        System.exit(0);
     }
 
     // CALLS FROM STORAGE SERVER
