@@ -1,7 +1,4 @@
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -9,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
+import java.util.logging.Level;
 
 public class Client {
     private static Registry registry;
@@ -28,6 +26,15 @@ public class Client {
         }
 
         LocalPath = args[0];
+        File local_dir = new File(LocalPath);
+        if (!local_dir.exists() && !local_dir.mkdirs()) {
+            System.err.println("cannot start client: failed to create local directory ‘" + LocalPath + "’");
+            return;
+        }
+        if (!local_dir.isDirectory()) {
+            System.err.println("cannot start client: not a directory ‘" + LocalPath + "’");
+            return;
+        }
         parseConfFile(args[1]);
 
         try {
@@ -206,18 +213,26 @@ public class Client {
             System.err.println("cannot create file ‘" + file + "’: not allowed on root directory");
             return;
         }
+        BufferedReader systemIn = null;
         try {
             String top_dir = getTopPath(path);
             String server = MetaData.find(top_dir);
             StorageInterface stub = (StorageInterface) registry.lookup(server);
-            BufferedReader systemIn = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
+
+            systemIn = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
             String line, blob = new String();
-            while((line = systemIn.readLine()) != null)
+            while((line = systemIn.readLine()) != null) {
                 blob = blob.concat(line).concat("\n");
+            }
+
             stub.create(path, blob);
         } catch (Exception e) {
             System.err.println(e.getMessage());
             return;
+        } finally {
+            if (systemIn != null) {
+                try { systemIn.close(); } catch (Exception e) { }
+            }
         }
     }
 
@@ -251,18 +266,72 @@ public class Client {
             System.err.println("cannot open file ‘" + file + "’: not allowed on root directory");
             return;
         }
-        String extension = file.substring(file.lastIndexOf(".") + 1);
+        StorageInterface stub = null;
+        BufferedReader reader = null;
+        BufferedWriter writer = null;
+        File target = null;
         try {
+            String top_dir = getTopPath(path);
+            String server = MetaData.find(top_dir);
+            stub = (StorageInterface) registry.lookup(server);
+
+            File source = stub.get(path);
+            reader = new BufferedReader(new FileReader(source));
+            String line, blob = new String();
+            while ((line = reader.readLine()) != null)
+                blob = blob.concat(line).concat("\n");
+
+            String file_name = path.substring(path.lastIndexOf("/"));
+            target = new File(LocalPath + file_name);
+            if (!target.exists() && !target.createNewFile()) {
+                System.err.println("cannot open file ‘" + file + "’: failed to create local file");
+                return;
+            }
+            writer = new BufferedWriter(new FileWriter(target));
+            writer.write(blob);
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+            return;
+        } finally {
+            if (reader != null) {
+                try { reader.close(); } catch (Exception e) { }
+            }
+            if (writer != null) {
+                try { writer.close(); } catch (Exception e) { }
+            }
+        }
+        Process process = null;
+        try {
+            String extension = path.substring(path.lastIndexOf(".") + 1);
             String application = Applications.get(extension);
             if (application == null) {
                 System.err.println("cannot open file ‘" + file + "’: unknown file extension");
                 return;
             }
-            Process process = Runtime.getRuntime().exec(new String[] { application, file });
+            process = Runtime.getRuntime().exec(new String[] { application, target.getPath() });
             process.waitFor();
+        } catch (Exception e) {
+            System.err.println("cannot open file ‘" + file + "’: failed to open application");
+        } finally {
+            if (process != null) {
+                try { process.destroy(); } catch (Exception e) { }
+            }
+        }
+        try {
+            reader = new BufferedReader(new FileReader(target));
+            String line, blob = new String();
+            while((line = reader.readLine()) != null) {
+                blob = blob.concat(line).concat("\n");
+            }
+            stub.create(path, blob);
+            target.delete();
         } catch (Exception e) {
             System.err.println(e.getMessage());
             return;
+        } finally {
+            if (reader != null) {
+                try { reader.close(); } catch (Exception e) { }
+            }
         }
     }
 
