@@ -4,8 +4,8 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -16,6 +16,7 @@ public class MetaDataServer implements MetaDataInterface {
     private static HashMap<String, String> StorageServers;
 
     private MetaDataServer() {
+        this.Hostname = new String();
         this.FileSystem = new FSTree();
         this.StorageServers = new HashMap<String, String>();
     }
@@ -84,24 +85,24 @@ public class MetaDataServer implements MetaDataInterface {
 
     public void addStorageItem(String item, NodeType type) throws Exception {
         // Example: addStorageItem("/courses/video1.avi");
-        if (checkTopPath(item)) {
-            Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: not allowed on root directory");
-            throw new Exception("cannot add item ‘" + item + "’: not allowed on root directory");
-        }
         if (!checkAbsPath(item)) {
             Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: invalid path");
             throw new Exception("cannot add item ‘" + item + "’: invalid path");
+        }
+        if (checkTopPath(item)) {
+            Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: not allowed on root directory");
+            throw new Exception("cannot add item ‘" + item + "’: not allowed on root directory");
         }
         if (type == NodeType.File && !checkExtension(item)) {
             Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: file extension not found");
             throw new Exception("cannot add item ‘" + item + "’: file extension not found");
         }
         if (!FileSystem.addNode(item, type)) {
-            if (FileSystem.getNode(item) == null) {
+            if (!checkExists(item)) {
                 Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: no such file or directory");
                 throw new Exception("cannot add item ‘" + item + "’: no such file or directory");
             }
-            if (FileSystem.getNode(item).isDir() || (FileSystem.getNode(item).isFile() && type == NodeType.Dir)) {
+            if (isDir(item) || (type == NodeType.Dir && isFile(item))) {
                 Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: file exists");
                 throw new Exception("cannot add item ‘" + item + "’: file exists");
             }
@@ -111,13 +112,13 @@ public class MetaDataServer implements MetaDataInterface {
 
     public void delStorageItem(String item) throws Exception {
         // Example: delStorageItem("/courses/video1.avi");
-        if (checkTopPath(item)) {
-            Log.log(Level.SEVERE, "cannot delete item ‘" + item + "’: not allowed on root directory");
-            throw new Exception("cannot delete item ‘" + item + "’: not allowed on root directory");
-        }
         if (!checkAbsPath(item)) {
             Log.log(Level.SEVERE, "cannot delete item ‘" + item + "’: invalid path");
             throw new Exception("cannot delete item ‘" + item + "’: invalid path");
+        }
+        if (checkTopPath(item)) {
+            Log.log(Level.SEVERE, "cannot delete item ‘" + item + "’: not allowed on root directory");
+            throw new Exception("cannot delete item ‘" + item + "’: not allowed on root directory");
         }
         if (!FileSystem.delNode(item)) {
             Log.log(Level.SEVERE, "cannot delete item ‘" + item + "’: no such file or directory");
@@ -153,9 +154,7 @@ public class MetaDataServer implements MetaDataInterface {
     public Stat lstat(String item) throws Exception {
         // Example: lstat("/courses"); -> { "machine1.dcc.fc.up.pt", { "afile.txt", "bfile.txt", "..." } }
         if (item.equals("/")) {
-            List<String> storages = new ArrayList<String>();
-            storages.addAll(StorageServers.keySet());
-            return new Stat(Hostname, storages);
+            return new Stat(Hostname, new ArrayList<String>(StorageServers.keySet()));
         }
         if (!checkAbsPath(item)) {
             Log.log(Level.SEVERE, "cannot access item ‘" + item + "’: invalid path");
@@ -173,12 +172,8 @@ public class MetaDataServer implements MetaDataInterface {
         }
         FSNode target = FileSystem.getNode(item);
         Log.log(Level.INFO, item);
-        return new Stat(storage, target.getChildsNames());
-    }
-
-    public boolean checkExists(String item) throws Exception {
-        FSNode target = FileSystem.getNode(item);
-        return target != null;
+        if (target.isDir()) return new Stat(storage, target.getChildsNames());
+        return  new Stat(storage, new ArrayList<String>(Arrays.asList(target.getName())));
     }
 
     public boolean isDir(String item) throws Exception {
@@ -191,11 +186,15 @@ public class MetaDataServer implements MetaDataInterface {
         return target != null && target.isFile();
     }
 
-    private boolean checkExtension(String path) {
-        if (!path.contains(".")) return false;
-        String prefix = path.substring(path.lastIndexOf("/") + 1, path.lastIndexOf("."));
-        String sufix = path.substring(path.lastIndexOf(".") + 1);
-        return !prefix.equals("") && !sufix.equals("");
+    public boolean checkExists(String item) throws Exception {
+        FSNode target = FileSystem.getNode(item);
+        return target != null;
+    }
+
+    private boolean checkTopPath(String path) {
+        String valid_top_dir = "^/((?!/\\.{2,}(/|$)|//|/).)*$";
+        if (path.matches(valid_top_dir)) return true;
+        return false;
     }
 
     private boolean checkAbsPath(String path) {
@@ -204,10 +203,12 @@ public class MetaDataServer implements MetaDataInterface {
         return false;
     }
 
-    private boolean checkTopPath(String path) {
-        String valid_top_dir = "^/((?!/\\.{2,}(/|$)|//|/).)*$";
-        if (path.matches(valid_top_dir)) return true;
-        return false;
+    private boolean checkExtension(String item) {
+        String name = item.substring(item.lastIndexOf("/") + 1);
+        if (!name.contains(".")) return false;
+        String prefix = name.substring(0, name.lastIndexOf("."));
+        String sufix = name.substring(name.lastIndexOf(".") + 1);
+        return !prefix.equals("") && !sufix.equals("");
     }
 
     private String getTopPath(String path) {
