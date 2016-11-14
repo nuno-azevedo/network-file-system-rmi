@@ -6,7 +6,7 @@ public interface MetaDataInterface extends Remote {
 
     void delStorageServer(String hostname, String top_dir) throws Exception;
 
-    void addStorageItem(String item, NodeType nodeType) throws Exception;
+    void addStorageItem(String item, NodeType type) throws Exception;
 
     void delStorageItem(String item) throws Exception;
 
@@ -15,9 +15,9 @@ public interface MetaDataInterface extends Remote {
 
     Stat lstat(String item) throws Exception;
 
-    boolean checkExists(String item) throws Exception;
-
     boolean isDir(String item) throws Exception;
 
     boolean isFile(String item) throws Exception;
+
+    boolean checkExists(String item) throws Exception;
 }
