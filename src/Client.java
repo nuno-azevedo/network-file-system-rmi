@@ -121,11 +121,6 @@ public class Client {
             else if (cmd_list.length == 2) touch(cmd_list[1]);
             else System.err.println(cmd_list[0] + ": too many arguments");
         }
-        else if (cmd_list[0].equals("nano")) {
-            if (cmd_list.length == 1) System.err.println(cmd_list[0] + ": missing arguments");
-            else if (cmd_list.length == 2) nano(cmd_list[1]);
-            else System.err.println(cmd_list[0] + ": too many arguments");
-        }
         else System.err.println(cmd_list[0] + ": command not found");
     }
 
@@ -199,45 +194,37 @@ public class Client {
             String top_dir = getTopPath(path);
             String server = MetaData.find(top_dir);
             StorageInterface stub = (StorageInterface) registry.lookup(server);
-            stub.create(path, new String());
+            stub.create(path, new byte[0]);
         } catch (Exception e) {
             System.err.println(e.getMessage());
             return;
-        }
-    }
-
-    private static void nano(String file) {
-        String path = parsePath(file);
-        if (checkTopPath(path)) {
-            System.err.println("cannot create file ‘" + file + "’: not allowed on root directory");
-            return;
-        }
-        BufferedReader systemIn = null;
-        try {
-            String top_dir = getTopPath(path);
-            String server = MetaData.find(top_dir);
-            StorageInterface stub = (StorageInterface) registry.lookup(server);
-
-            systemIn = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
-            String line, blob = new String();
-            while((line = systemIn.readLine()) != null) {
-                blob = blob.concat(line).concat("\n");
-            }
-
-            stub.create(path, blob);
-        } catch (Exception e) {
-            System.err.println(e.getMessage());
-            return;
-        } finally {
-            if (systemIn != null) {
-                try { systemIn.close(); } catch (Exception e) { }
-            }
         }
     }
 
     private static void mv(String file1, String file2) {
         // Copies file file1 to file2, overwriting if the latter exists
         // file can be a simple name or absolute or relative path
+        String path1 = parsePath(file1);
+        String path2 = parsePath(file2);
+        if (checkTopPath(path1) || checkTopPath(path2)) {
+            System.err.println("cannot move file ‘" + file1 + "’: not allowed on root directory");
+            return;
+        }
+        try {
+            String top_dir = getTopPath(path1);
+            String server = MetaData.find(top_dir);
+            StorageInterface stub = (StorageInterface) registry.lookup(server);
+
+            byte fileBytes[] = stub.get(path1);
+            top_dir = getTopPath(path2);
+            server = MetaData.find(top_dir);
+            stub = (StorageInterface) registry.lookup(server);
+            stub.create(path2, fileBytes);
+            stub.del(path1);
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+            return;
+        }
     }
 
     private static void rm(String item) {
@@ -266,37 +253,29 @@ public class Client {
             return;
         }
         StorageInterface stub = null;
-        BufferedReader reader = null;
-        BufferedWriter writer = null;
         File target = null;
+        FileOutputStream outStream = null;
         try {
             String top_dir = getTopPath(path);
             String server = MetaData.find(top_dir);
             stub = (StorageInterface) registry.lookup(server);
 
-            File source = stub.get(path);
-            reader = new BufferedReader(new FileReader(source));
-            String line, blob = new String();
-            while ((line = reader.readLine()) != null)
-                blob = blob.concat(line).concat("\n");
-
+            byte fileBytes[] = stub.get(path);
             String file_name = path.substring(path.lastIndexOf("/"));
             target = new File(LocalPath + file_name);
             if (!target.exists() && !target.createNewFile()) {
                 System.err.println("cannot open file ‘" + file + "’: failed to create local file");
                 return;
             }
-            writer = new BufferedWriter(new FileWriter(target));
-            writer.write(blob);
+            outStream = new FileOutputStream(target);
+            outStream.write(fileBytes);
+            outStream.close();
         } catch (Exception e) {
             System.err.println(e.getMessage());
             return;
         } finally {
-            if (reader != null) {
-                try { reader.close(); } catch (Exception e) { }
-            }
-            if (writer != null) {
-                try { writer.close(); } catch (Exception e) { }
+           if (outStream != null) {
+                try { outStream.close(); } catch (Exception e) { }
             }
         }
         Process process = null;
@@ -311,25 +290,25 @@ public class Client {
             process.waitFor();
         } catch (Exception e) {
             System.err.println("cannot open file ‘" + file + "’: failed to open application");
+            return;
         } finally {
             if (process != null) {
                 try { process.destroy(); } catch (Exception e) { }
             }
         }
+        FileInputStream inStream = null;
         try {
-            reader = new BufferedReader(new FileReader(target));
-            String line, blob = new String();
-            while((line = reader.readLine()) != null) {
-                blob = blob.concat(line).concat("\n");
-            }
-            stub.create(path, blob);
+            byte fileBytes[] = new byte[(int) target.length()];
+            inStream = new FileInputStream(target);
+            inStream.read(fileBytes);
+            stub.create(path, fileBytes);
             target.delete();
         } catch (Exception e) {
             System.err.println(e.getMessage());
             return;
         } finally {
-            if (reader != null) {
-                try { reader.close(); } catch (Exception e) { }
+            if (inStream != null) {
+                try { inStream.close(); } catch (Exception e) { }
             }
         }
     }
