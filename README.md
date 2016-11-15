@@ -1,6 +1,12 @@
 # Network File-System
 
 <br>
+### How to Build
+```bash
+$ javac -d . src/*
+```
+
+<br>
 ### How to Run
 
 ###### 1° Java RMI
@@ -10,17 +16,17 @@ $ rmiregistry
 
 ###### 2° MetaDataServer
 ```bash
-$ java MetaDataServer $METADATA_HOSTNAME
+$ java MetaDataServer ${METADATA_HOSTNAME}
 ```
 
 ###### 3° StorageServer
 ```bash
-$ java StorageServer $STORAGE_HOSTNAME $STORAGE_LOCAL_PATH $STORAGE_FILESYSTEM_PATH $METADATA_HOSTNAME
+$ java StorageServer ${METADATA_HOSTNAME} ${STORAGE_HOSTNAME} ${STORAGE_LOCAL_PATH} ${STORAGE_FILESYSTEM_PATH}
 ```
 
 ###### 4° Client
 ```bash
-$ java Client $CONFIG_FILE $METADATA_HOSTNAME
+$ java Client ${METADATA_HOSTNAME} ${CONFIG_FILE}
 ```
 
 <br>
@@ -35,7 +41,7 @@ $ java Client $CONFIG_FILE $METADATA_HOSTNAME
 - **open** *‘path to file’* : Opens a file with the application specified on configuration file apps.conf
 
 <br>
-#### Close MetaDataServer and StorageServer
-These programs can be closed with:
-- <kbd>CTRL+C</kbd> : The program will force close and will not inform the others of his close by RMI, which forces to restart *‘rmiregistry’* and all the others before starting it again
-- <kbd>CTRL+D</kbd> : The program will notify all the others of his close by RMI before it really quits, so it's ok to restart it again without restarting the others
+### Close MetaDataServer and StorageServer
+###### These programs can be closed with:
+- <kbd>CTRL C</kbd> : The program will force close and will not inform the others of his close by RMI, which forces to restart *‘rmiregistry’* and all the others before starting it again
+- <kbd>CTRL D</kbd> : The program will notify all the others of his close by RMI before it really quits, so it's ok to restart it again without restarting the others
