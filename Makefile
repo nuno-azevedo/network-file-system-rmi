@@ -1,8 +1,8 @@
 METADATA = MetaDataServer
-METADATA_HOST = machine0.dcc.fc.up.pt
+METADATA_HOST = machine0.example.com
 
 STORAGE = StorageServer
-STORAGE_HOST = machine1.dcc.fc.up.pt
+STORAGE_HOST = machine1.example.com
 STORAGE_REMOTE_PATH = /Storage
 
 CLIENT = Client
