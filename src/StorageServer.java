@@ -17,7 +17,7 @@ public class StorageServer implements StorageInterface {
 
     public static void main(String args[]) {
         if (args.length != 4) {
-            System.err.println("USAGE: java StorageServer $HOSTNAME $LOCAL_PATH $FILESYSTEM_PATH $METADATA_HOSTNAME");
+            System.err.println("USAGE: java StorageServer $METADATA_HOSTNAME $HOSTNAME $LOCAL_PATH $FILESYSTEM_PATH");
             System.exit(1);
         }
 
@@ -26,9 +26,9 @@ public class StorageServer implements StorageInterface {
             StorageServer obj = new StorageServer();
             StorageInterface stub = (StorageInterface) UnicastRemoteObject.exportObject(obj, 0);
             registry = LocateRegistry.getRegistry();
-            registry.bind(args[0], stub);
-            MetaData = (MetaDataInterface) registry.lookup(args[3]);
-            init(args[0], args[1], args[2]);
+            registry.bind(args[1], stub);
+            MetaData = (MetaDataInterface) registry.lookup(args[0]);
+            init(args[1], args[2], args[3]);
 
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
             while(br.readLine() != null);
@@ -36,8 +36,8 @@ public class StorageServer implements StorageInterface {
             e.printStackTrace();
         } finally {
             try {
-                if (MetaData != null) close(args[0], args[1], args[2]);
-                if (registry != null) registry.unbind(args[0]);
+                if (MetaData != null) close(args[1], args[2], args[3]);
+                if (registry != null) registry.unbind(args[1]);
             } catch (Exception e) {
                 e.printStackTrace();
                 System.exit(1);
