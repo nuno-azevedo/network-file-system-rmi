@@ -10,7 +10,6 @@ import java.util.Scanner;
 public class Client {
     private static Registry registry;
     private static MetaDataInterface MetaData;
-    private static String LocalPath;
     private static String CurrentDir = "/";
     private static HashMap<String, String> Applications = new HashMap<String, String>();
 
@@ -19,26 +18,15 @@ public class Client {
     }
 
     public static void main(String args[]) throws RemoteException {
-        if (args.length != 3) {
-            System.err.println("USAGE: java Client $LOCAL_PATH $CONFIG_FILE $METADATA_HOSTNAME");
+        if (args.length != 2) {
+            System.err.println("USAGE: java Client $METADATA_HOSTNAME $CONFIG_FILE");
             System.exit(1);
         }
 
-        LocalPath = args[0];
-        File local_dir = new File(LocalPath);
-        if (!local_dir.exists() && !local_dir.mkdirs()) {
-            System.err.println("cannot start client: failed to create local directory ‘" + LocalPath + "’");
-            return;
-        }
-        if (!local_dir.isDirectory()) {
-            System.err.println("cannot start client: not a directory ‘" + LocalPath + "’");
-            return;
-        }
         parseConfFile(args[1]);
-
         try {
             registry = LocateRegistry.getRegistry();
-            MetaData = (MetaDataInterface) registry.lookup(args[2]);
+            MetaData = (MetaDataInterface) registry.lookup(args[0]);
         } catch (Exception e) {
             System.err.println(e.getMessage());
             System.exit(1);
@@ -101,6 +89,11 @@ public class Client {
             else if (cmd_list.length == 2) mkdir(cmd_list[1]);
             else System.err.println(cmd_list[0] + ": too many arguments");
         }
+        else if (cmd_list[0].equals("touch")) {
+            if (cmd_list.length == 1) System.err.println(cmd_list[0] + ": missing arguments");
+            else if (cmd_list.length == 2) touch(cmd_list[1]);
+            else System.err.println(cmd_list[0] + ": too many arguments");
+        }
         else if (cmd_list[0].equals("mv")) {
             if (cmd_list.length < 3) System.err.println(cmd_list[0] + ": missing arguments");
             else if (cmd_list.length == 3) mv(cmd_list[1], cmd_list[2]);
@@ -114,11 +107,6 @@ public class Client {
         else if (cmd_list[0].equals("open")) {
             if (cmd_list.length == 1) System.err.println(cmd_list[0] + ": missing arguments");
             else if (cmd_list.length == 2) open(cmd_list[1]);
-            else System.err.println(cmd_list[0] + ": too many arguments");
-        }
-        else if (cmd_list[0].equals("touch")) {
-            if (cmd_list.length == 1) System.err.println(cmd_list[0] + ": missing arguments");
-            else if (cmd_list.length == 2) touch(cmd_list[1]);
             else System.err.println(cmd_list[0] + ": too many arguments");
         }
         else System.err.println(cmd_list[0] + ": command not found");
@@ -140,7 +128,6 @@ public class Client {
             System.out.println();
         } catch (Exception e) {
             System.err.println(e.getMessage());
-            return;
         }
     }
 
@@ -154,17 +141,15 @@ public class Client {
         }
         try {
             if (!MetaData.checkExists(path)) {
-                System.err.println("cannot change to directory ‘" + dir + "’: no such file or directory");
-                return;
+                throw new Exception("cannot change to directory ‘" + dir + "’: no such file or directory");
             }
             if (!MetaData.isDir(path)) {
-                System.err.println("cannot change to directory ‘" + dir + "’: not a directory");
-                return;
+                throw new Exception("cannot change to directory ‘" + dir + "’: not a directory");
             }
+            CurrentDir = path;
         } catch (Exception e) {
-            return;
+            System.err.println(e.getMessage());
         }
-        CurrentDir = path;
     }
 
     private static void mkdir(String dir) {
@@ -180,7 +165,6 @@ public class Client {
             stub.create(path);
         } catch (Exception e) {
             System.err.println(e.getMessage());
-            return;
         }
     }
 
@@ -197,7 +181,6 @@ public class Client {
             stub.create(path, new byte[0]);
         } catch (Exception e) {
             System.err.println(e.getMessage());
-            return;
         }
     }
 
@@ -207,23 +190,21 @@ public class Client {
         String path1 = parsePath(file1);
         String path2 = parsePath(file2);
         if (checkTopPath(path1) || checkTopPath(path2)) {
-            System.err.println("cannot move file ‘" + file1 + "’: not allowed on root directory");
+            System.err.println("cannot move file ‘" + file1 + "’ to file ‘" + file2 + "’: not allowed on root directory");
             return;
         }
         try {
             String top_dir = getTopPath(path1);
             String server = MetaData.find(top_dir);
             StorageInterface stub = (StorageInterface) registry.lookup(server);
-
-            byte fileBytes[] = stub.get(path1);
+            byte bytes[] = stub.get(path1);
             top_dir = getTopPath(path2);
             server = MetaData.find(top_dir);
             stub = (StorageInterface) registry.lookup(server);
-            stub.create(path2, fileBytes);
+            stub.create(path2, bytes);
             stub.del(path1);
         } catch (Exception e) {
             System.err.println(e.getMessage());
-            return;
         }
     }
 
@@ -240,7 +221,6 @@ public class Client {
             stub.del(path);
         } catch (Exception e) {
             System.err.println(e.getMessage());
-            return;
         }
     }
 
@@ -254,29 +234,27 @@ public class Client {
         }
         StorageInterface stub = null;
         File target = null;
-        FileOutputStream outStream = null;
+        FileOutputStream fos = null;
         try {
             String top_dir = getTopPath(path);
             String server = MetaData.find(top_dir);
             stub = (StorageInterface) registry.lookup(server);
-
-            byte fileBytes[] = stub.get(path);
-            String file_name = path.substring(path.lastIndexOf("/"));
-            target = new File(LocalPath + file_name);
+            byte bytes[] = stub.get(path);
+            String name = path.substring(path.lastIndexOf("/"));
+            target = new File(System.getProperty("user.home") + "/.cache" + name);
             if (!target.exists() && !target.createNewFile()) {
                 System.err.println("cannot open file ‘" + file + "’: failed to create local file");
                 return;
             }
-            outStream = new FileOutputStream(target);
-            outStream.write(fileBytes);
-            outStream.close();
+            fos = new FileOutputStream(target);
+            fos.write(bytes);
         } catch (Exception e) {
             System.err.println(e.getMessage());
             return;
         } finally {
-           if (outStream != null) {
-                try { outStream.close(); } catch (Exception e) { }
-            }
+           if (fos != null) {
+                try { fos.close(); } catch (Exception e) { }
+           }
         }
         Process process = null;
         try {
@@ -296,19 +274,19 @@ public class Client {
                 try { process.destroy(); } catch (Exception e) { }
             }
         }
-        FileInputStream inStream = null;
+        FileInputStream fis = null;
         try {
-            byte fileBytes[] = new byte[(int) target.length()];
-            inStream = new FileInputStream(target);
-            inStream.read(fileBytes);
-            stub.create(path, fileBytes);
+            byte bytes[] = new byte[(int) target.length()];
+            fis = new FileInputStream(target);
+            fis.read(bytes);
+            stub.create(path, bytes);
             target.delete();
         } catch (Exception e) {
             System.err.println(e.getMessage());
             return;
         } finally {
-            if (inStream != null) {
-                try { inStream.close(); } catch (Exception e) { }
+            if (fis != null) {
+                try { fis.close(); } catch (Exception e) { }
             }
         }
     }
