@@ -1,0 +1,147 @@
+\documentclass{article}
+
+\usepackage{geometry}
+\geometry{
+  a4paper,           % or letterpaper
+  textwidth = 14cm,  % llncs has 12.2cm
+  textheight = 21cm, % llncs has 19.3cm
+  heightrounded,     % integer number of lines
+  hratio = 1:1,      % horizontally centered
+  vratio = 2:3,      % not vertically centered
+}
+
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+\usepackage{graphicx, color}
+\usepackage{indentfirst}
+\usepackage{url}
+\usepackage[capposition=top]{floatrow}
+
+\setlength{\parskip}{0.4cm}
+\renewcommand{\baselinestretch}{1.1}
+
+\begin{document}
+
+\begin{titlepage}
+	\centering
+	\def\svgwidth{0.6\textwidth}
+	\input{fcup_logo.eps_tex}\par
+	\vspace{1cm}
+	{\scshape\Large Sistemas Distribuídos\par}
+	\vspace{3cm}
+	{\Huge\bfseries Network File-System\par}
+	\vspace{5cm}
+	{\Large\itshape Marco Pontes | Nuno Azevedo\par}
+	\vspace{0.5cm}
+	{\Large up201308000@fc.up.pt | up201306310@fc.up.pt\par}
+	\vfill
+	{\large 14 de Novembro de 2016\par}
+\end{titlepage}
+
+\newpage
+\setcounter{page}{2}
+
+\section{Abstract}
+
+O objetivo deste projeto é a implementação de um sistema de ficheiros em rede (\textit{Network File-System)}. A comunicação cliente - servidor (utilizador - sistema de ficheiros virtual) assenta na tecnologia \textit{Java RMI}\footnote{\url{https://docs.oracle.com/javase/tutorial/rmi/}}. O \textit{Network File-System} suporta várias unidades de armazenamento assim como vários clientes.
+
+\section{Introdução}
+
+Um \textit{Network File-System} é um sistema de ficheiros em rede constituído por uma ou mais unidades físicas de armazenamento, estando disponíveis para o cliente poder guardar os seus ficheiros. Este serviço tem como principal função criar um sistema virtual sobre servidores físicos com o objetivo de armazenar ficheiros de forma distribuída, em computadores interligados por rede.          
+
+De forma a aumentar o espaço disponível no \textit{Network File-System}, pode ser necessário a inserção de mais do que uma unidade de armazenamento mas isso deve ser transparente ao cliente, pois este não tem de se preocupar com a localização real dos seus dados. Com isto, é necessário um servidor que unifique as unidades de armazenamento.
+
+O servidor de meta-dados cria uma camada virtual sobre as unidades de armazenamento de forma a que virtualmente exista apenas um sistema de ficheiros. Sendo assim, este servidor é considerado o núcleo do sistema devido a fazer a ligação entre todos os componentes.
+
+A comunicação entre o cliente, o servidor de meta-dados e as unidades de armazenamento é feita através da tecnologia \textit{Java RMI} sendo este um mecanismo que permite a invocação de métodos residentes em diferentes máquinas virtuais \textit{Java} (\textit{JVM}), permitindo assim ao cliente a manipulação dos ficheiros no servidor remotamente.
+
+\newpage
+
+\section{Descrição}
+
+Após todos os componentes estarem conectados e em sincronia, podemos ver um sistema de ficheiros como o representado na figura \ref{fig:scheme}.\\
+
+\begin{figure}[h]
+\def\svgwidth{1\textwidth\centering}
+\caption{Interação entre o cliente (\textit{Client}), o servidor de meta-dados (\textit{Meta-data Server}) e as unidades de armazenamento (\textit{Storage Server}).}
+\input{scheme.eps_tex}\par
+\floatfoot{\textit{Origem:} \url{http://www.dcc.fc.up.pt/~rmartins/aulas/sd1617/trabI/trabI.pdf}\vspace{0.3cm}}
+\label{fig:scheme}
+\end{figure}
+
+Como referido em cima, pode-se confirmar nesta figura que o servidor de meta-dados \textit{(Meta-data Server)} tem as informações de todas as unidades de armazenamento \textit{(Storage Servers)}.
+
+Do ponto de vista do utilizador, este tem uma vista sobre um sistema de ficheiros de tal forma uniforme, opaco ao conjunto de unidades de armazenamento que o constituem, que tornam a navegação sobre o \textit{Network File-System} semelhante a um sistema de ficheiros local. 
+
+Quanto à implementação, sempre que o cliente \textit{(Client)} precisa de aceder a um ficheiro, tem de contactar o servidor de meta-dados para ficar a conhecer a localização real do ficheiro. Depois disso, pode aceder diretamente à unidade de armazenamento correspondente para efetuar as operações que desejar.
+
+Quando o cliente fizer alguma alteração, a unidade de armazenamento onde essa alteração ocorrer fica responsável por informar o meta-dados do evento para este atualizar as suas informações.
+ 
+\subsection{Metodologia}
+
+Para o desenvolvimento do projeto usamos o \textit{IDE IntelliJ IDEA}\footnote{\url{https://www.jetbrains.com/idea/}} de forma a tornar a programação mais rápida e eficiente, além de que nos ajudou imenso a conhecer os vários métodos disponíveis nas bibliotecas usadas durante o desenvolvimento do projeto.
+
+Pela facilidade de trabalhar em grupo, de ter registos de toda a atividade do projeto, como também nos permitir ter o código guardado de forma segura, usamos a ferramenta \textit{Git}, neste caso o \textit{GitLab\footnote{\url{https://gitlab.com/}}} para manter o projeto privado gratuitamente.
+
+Quanto à divisão das tarefas do projeto, optamos por repartir os métodos de cada classe entre nós, de modo a que cada um conseguisse perceber um pouco de cada componente (\textit{Client, Meta-data Server e Storage Server}).
+
+\subsection{Interfaces/API Usada}
+
+\begin{itemize}
+\item \textbf{\textit{Storage Interface}} - Permite que o cliente interaja com um \textit{Storage Server} através dos seguintes métodos:
+	\begin{itemize}
+		\item \textbf{\textit{create()}:} Cria um novo diretório/ficheiro, ou atualiza um ficheiro já existente.
+		\item \textbf{\textit{del()}:} Apaga um diretório/ficheiro. No caso do diretório conter sub-diretórios/ficheiros, este método apaga todos as entradas recursivamente.
+		\item \textbf{\textit{get()}:} Retorna o conteúdo do ficheiro da localização indicada na forma de \textit{array} de \textit{bytes}.
+	\end{itemize}
+\item \textbf{\textit{Meta-data Interface}}
+	\begin{itemize}
+		\item Métodos invocados pelos \textit{Storage Servers} - Permitem que um \textit{Storage Server} comunique com o servidor de meta-dados informando de todas as alterações que ocorrem:
+		\begin{itemize}
+			\item \textbf{\textit{addStorageServer()}:} Existência de uma nova unidade de armazenamento.
+			\item \textbf{\textit{delStorageServer()}:} Remoção de uma unidade de armazenamento. 
+			\item \textbf{\textit{addStorageItem()}:} Criação de um novo diretório/ficheiro.
+			\item \textbf{\textit{delStorageItem()}:} Remoção de um diretório/ficheiro.
+		\end{itemize}
+		\item Métodos invocados pelo \textit{Client} - Permitem fornecer ao cliente informações acerca dos ficheiros armazenados nos vários \textit{Storage Servers}:
+		\begin{itemize}
+			\item \textbf{\textit{find()}:} Mostra em qual das unidades de armazenamento um determinado item está localizado.
+			\item \textbf{\textit{lstat()}:} Lista todos as entradas num determinado diretório ou, no caso do argumento dado ser um ficheiro, mostra o ficheiro se ele existir.
+			\item \textbf{\textit{checkExists()}:} Verifica se um determinado diretório/ficheiro existe.
+			\item \textbf{\textit{isDir()}:} Verifica se uma determinada entrada é um diretório.
+			\item \textbf{\textit{isFile()}:} Verifica se uma determinada entrada é um ficheiro.
+		\end{itemize}
+	\end{itemize}
+\end{itemize}
+
+\subsection{Classes Principais e Suas Funcionalidades}
+
+\begin{itemize}
+\item \textbf{StorageServer:} Representa uma unidade de armazenamento responsável pela gestão de ficheiros em disco. Antes de iniciar, verifica se já existem ficheiros no seu diretório local de forma a já os incluir no novo servidor. Efetua as alterações nos diretórios ou ficheiros tal como criar, remover ou alterar e, apenas no caso de ficheiros, enviar ficheiros para o cliente.
+\item \textbf{MetaDataServer:} Responsável pela ligação entre todos os \textit{Clients} e o \textit{Storage Servers}. Regista todas as alterações das unidades de armazenamento, incluindo a inserção ou remoção de novas unidades. Fornece ao cliente informações sobre os diretórios/ficheiros existentes nos vários \textit{Storage Servers}.
+\item \textbf{Client:} Esta classe proporciona uma interface para o utilizar interagir com o sistema de ficheiros virtual. Conecta-se ao \textit{Meta-data Server} apenas para verificar e obter informações sobre o conteúdo do sistema de ficheiros. Quanto à gestão dos seus ficheiros, o cliente conecta-se aos vários \textit{Storage Servers} para criar e remover diretórios, ou, criar, alterar, remover e mover ficheiros.
+\item \textbf{FSTree:} Classe que representa a árvore do sistema de ficheiros virtual utilizada no \textit{Meta-data Server}. Está capacitada para retornar as suas informações, como o nome, tipo, diretório parente e informações sobre os nós filhos de um determinado nó na árvore. Também permite adicionar e remover entradas na árvore, ou seja, criar e remover diretórios e ficheiros.
+\item \textbf{Stat:} Desempenha a função de transportar as informações de um determinado nó do sistema de ficheiros, como o seu nome e os seus filhos no caso de ser um diretório, para o cliente, quando este invoca um método para listar as informações de um determinado diretório/ficheiro. 
+\end{itemize}
+
+
+\subsection{Principais Problemas Encontrados e Soluções Propostas}
+
+\begin{itemize}
+\item \textbf{Exceções:} Tivemos algumas dificuldades em lidar com todas as exceções lançadas pelos \textit{Storage Servers} e \textit{Meta-data Server} e ter um tratamento adequado para cada uma delas, de modo a que o sistema esteja protegido contra todas as falhas. Por vezes tivemos de propagar exceções lançadas pelo \textit{Meta-data Server}, para um \textit{Storage Server} e esse ter de propagar novamente para um \textit{Client}.
+\item \textbf{Caminhos:} Implementámos uma função para fazer \textit{parsing} de todo o tipo de caminhos, sejam eles absolutos, relativos ou até mesmo contendo a sintaxe ``.."\space para indicar o diretório parente. Esta função apesar de não ser nada complexa, demorou algum tempo até funcionar sem problemas, pois devido ao número de possibilidades havia sempre algum caso de falha.
+\item \textbf{Unidades de Armazenamento:} Um dos problemas que nos acompanhou desde o início da implementação foi como lidar com um número dinâmico de \textit{Storage Servers}. Quando o cliente se liga ao sistema de ficheiros não tem qualquer conhecimento sobre como este está constituído, e para realizar alguma alteração usando \textit{Java RMI}, é necessário o \textit{stub} da \textit{interface} de cada \textit{Storage}. A solução passou por utilizar o \textit{Meta-data Server} como o fornecedor do \textit{hostname} de cada \textit{Storage} através da função \textit{find()} para depois conseguir fazer um \textit{lookup()} no registo do \textit{RMI} com esse \textit{hostname} e assim conectar-se aos diversos \textit{Storage Servers}.
+\item \textbf{Transferência de Ficheiros:} Relativamente a esta ação, a dificuldade que sentimos foi como conseguir transferir ficheiros de qualquer tipo, pois numa implementação inicial o nosso programa apenas suportava a transferência de ficheiros de texto, pois utilizávamos \textit{strings} para representar o conteúdo dos ficheiros. Para transferir por exemplo imagens este método não funcionou, portanto após uma pesquisa mais aprofundada verificámos que a melhor solução seria transferir o ficheiro através de um \textit{array} de \textit{bytes}, para que assim fosse possível transferir qualquer tipo de ficheiro.
+\end{itemize}
+
+\section{Conclusão}
+
+De uma forma geral, conseguimos implementar um sistema de ficheiros em rede totalmente funcional, capaz de responder a todos os pedidos de um utilizador.
+
+Não tivemos oportunidade de testar o projeto num ambiente distribuído, no entanto, tivemos sempre a preocupação de a implementação estar preparada para tal, por isso cremos que não existirão muitos problemas para tornar o sistema de ficheiros funcional ao ser composto por diferentes servidores.
+
+A realização deste trabalho permitiu o aprofundamento do nosso conhecimento em vários temas. Nomeadamente, para perceber como um sistema de ficheiros em rede funciona, apesar de que num nível básico, e a forma como realiza a comunicação entre os seus componentes usando o mecanismo \textit{Java RMI}. Permitiu também aprender um pouco mais sobre a programação orientada a objetos.
+
+Consideramos que o tema do trabalho foi adequado para testar a aplicação desta tecnologia e nos deu bastantes ideias para a colocar em prática numa situação real.
+
+\end{document}
