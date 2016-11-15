@@ -14,12 +14,12 @@ $ javac -d . src/*
 $ rmiregistry
 ```
 
-###### 2° MetaDataServer
+###### 2° Meta-Data Server
 ```bash
 $ java MetaDataServer ${METADATA_HOSTNAME}
 ```
 
-###### 3° StorageServer
+###### 3° Storage Server
 ```bash
 $ java StorageServer ${METADATA_HOSTNAME} ${STORAGE_HOSTNAME} ${STORAGE_LOCAL_PATH} ${STORAGE_FILESYSTEM_PATH}
 ```
@@ -41,7 +41,7 @@ $ java Client ${METADATA_HOSTNAME} ${CONFIG_FILE}
 - **open** *‘path to file’* : Opens a file with the application specified on configuration file apps.conf
 
 <br>
-### Close MetaDataServer and StorageServer
+### Close Meta-Data Server and Storage Server
 ###### These programs can be closed with:
 - <kbd>CTRL C</kbd> : The program will force close and will not inform the others of his close by RMI, which forces to restart *‘rmiregistry’* and all the others before starting it again
 - <kbd>CTRL D</kbd> : The program will notify all the others of his close by RMI before it really quits, so it's ok to restart it again without restarting the others
