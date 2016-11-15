@@ -23,10 +23,10 @@ metadata: build
 	java ${METADATA} ${METADATA_HOST}
 
 storage: build
-	java ${STORAGE} ${STORAGE_HOST} ${HOME} ${STORAGE_REMOTE_PATH} ${METADATA_HOST}
+	java ${STORAGE} ${METADATA_HOST} ${STORAGE_HOST} ${HOME} ${STORAGE_REMOTE_PATH}
 
 client: build
-	java ${CLIENT} ${CONFIG_FILE} ${METADATA_HOST}
+	java ${CLIENT} ${METADATA_HOST} ${CONFIG_FILE}
 
 stop:
 	- pkill rmiregistry
