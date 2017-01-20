@@ -60,7 +60,6 @@ public class StorageServer implements StorageInterface {
         } catch (Exception e) {
             throw e;
         }
-
         File dir = new File(LocalPath);
         if (!dir.exists() && !dir.mkdirs()) {
             throw new Exception("cannot init storage server ‘" + Hostname + "’: failed to create local directory ‘" + LocalPath + "’");
