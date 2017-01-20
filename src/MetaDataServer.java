@@ -1,5 +1,3 @@
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
@@ -11,9 +9,9 @@ import java.util.logging.Logger;
 
 public class MetaDataServer implements MetaDataInterface {
     private static final Logger Log = Logger.getLogger(MetaDataServer.class.getName());
+    private static HashMap<String, String> StorageServers;
     private static String Hostname;
     private static FSTree FileSystem;
-    private static HashMap<String, String> StorageServers;
 
     private MetaDataServer() {
         this.Hostname = new String();
@@ -27,27 +25,25 @@ public class MetaDataServer implements MetaDataInterface {
             System.exit(1);
         }
 
-        Registry registry = null;
         try {
             MetaDataServer obj = new MetaDataServer();
             MetaDataInterface stub = (MetaDataInterface) UnicastRemoteObject.exportObject(obj, 0);
-            registry = LocateRegistry.getRegistry();
+            Registry registry = LocateRegistry.getRegistry();
             registry.bind(args[0], stub);
             Hostname = args[0];
 
-            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-            while (br.readLine() != null) ;
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> exit(registry, obj)));
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            try {
-                if (registry != null) registry.unbind(args[0]);
-                else System.exit(1);
-            } catch (Exception e) {
-                e.printStackTrace();
-                System.exit(1);
-            }
-            System.exit(0);
+        }
+    }
+
+    private static void exit(Registry registry, MetaDataServer obj) {
+        try {
+            if (registry != null) registry.unbind(Hostname);
+            UnicastRemoteObject.unexportObject(obj, true);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -97,10 +93,6 @@ public class MetaDataServer implements MetaDataInterface {
         if (checkTopPath(item)) {
             Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: not allowed on root directory");
             throw new Exception("cannot add item ‘" + item + "’: not allowed on root directory");
-        }
-        if (type == NodeType.File && !checkExtension(item)) {
-            Log.log(Level.SEVERE, "cannot add item ‘" + item + "’: file extension not found");
-            throw new Exception("cannot add item ‘" + item + "’: file extension not found");
         }
         if (!FileSystem.addNode(item, type)) {
             if (!checkExists(item)) {
@@ -178,7 +170,7 @@ public class MetaDataServer implements MetaDataInterface {
         FSNode target = FileSystem.getNode(item);
         Log.log(Level.INFO, item);
         if (target.isDir()) return new Stat(storage, target.getChildsNames());
-        return  new Stat(storage, new ArrayList<String>(Arrays.asList(target.getName())));
+        return new Stat(storage, new ArrayList<String>(Arrays.asList(target.getName())));
     }
 
     public boolean isDir(String item) throws Exception {
@@ -196,24 +188,14 @@ public class MetaDataServer implements MetaDataInterface {
         return target != null;
     }
 
-    private boolean checkTopPath(String path) {
-        String valid_top_dir = "^/((?!/\\.{2,}(/|$)|//|/).)*$";
-        if (path.matches(valid_top_dir)) return true;
-        return false;
-    }
-
     private boolean checkAbsPath(String path) {
-        String valid_abs_path = "^/((?!/\\.{2,}(/|$)|//).)*(?<!/)$";
-        if (path.matches(valid_abs_path)) return true;
-        return false;
+        String valid_abs_path = "^/([^/\0]+/?)+$";
+        return path.matches(valid_abs_path);
     }
 
-    private boolean checkExtension(String item) {
-        String name = item.substring(item.lastIndexOf("/") + 1);
-        if (!name.contains(".")) return false;
-        String prefix = name.substring(0, name.lastIndexOf("."));
-        String sufix = name.substring(name.lastIndexOf(".") + 1);
-        return !prefix.equals("") && !sufix.equals("");
+    private boolean checkTopPath(String path) {
+        String valid_top_path = "^/([^/\0]+/?){0,1}$";
+        return path.matches(valid_top_path);
     }
 
     private String getTopPath(String path) {

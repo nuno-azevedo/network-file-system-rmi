@@ -189,20 +189,29 @@ public class Client {
         // file can be a simple name or absolute or relative path
         String path1 = parsePath(file1);
         String path2 = parsePath(file2);
-        if (checkTopPath(path1) || checkTopPath(path2)) {
-            System.err.println("cannot move file ‘" + file1 + "’ to file ‘" + file2 + "’: not allowed on root directory");
-            return;
-        }
         try {
+            if (MetaData.isDir(path2)) {
+                String nodes[] = path1.split("/");
+                String file = nodes[nodes.length - 1];
+                path2 += "/" + file;
+            } else if (checkTopPath(path2)) {
+                System.err.println("cannot move file ‘" + file1 + "’ to file ‘" + file2 + "’: not allowed on root directory");
+                return;
+            }
+            if (path1.equals(path2)) {
+                System.err.println("cannot move file ‘" + file1 + "’ to file ‘" + file2 + "’: same location");
+                return;
+            }
             String top_dir = getTopPath(path1);
             String server = MetaData.find(top_dir);
-            StorageInterface stub = (StorageInterface) registry.lookup(server);
-            byte bytes[] = stub.get(path1);
+            StorageInterface stub1 = (StorageInterface) registry.lookup(server);
+            byte bytes[] = stub1.get(path1);
+
             top_dir = getTopPath(path2);
             server = MetaData.find(top_dir);
-            stub = (StorageInterface) registry.lookup(server);
-            stub.create(path2, bytes);
-            stub.del(path1);
+            StorageInterface stub2 = (StorageInterface) registry.lookup(server);
+            stub2.create(path2, bytes);
+            stub1.del(path1);
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
@@ -311,7 +320,7 @@ public class Client {
     }
 
     private static boolean checkTopPath(String top_dir) {
-        String valid_top_dir = "^/((?!/\\.{2,}(/|$)|//|/).)*$";
+        String valid_top_dir = "^/([^/\0]+/?){0,1}$";
         if (top_dir.matches(valid_top_dir)) return true;
         return false;
     }
