@@ -1,4 +1,4 @@
-network-file-system.iml
 .idea
-out
+*.iml
 *.class
+out
