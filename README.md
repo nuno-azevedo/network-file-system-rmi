@@ -38,9 +38,3 @@ $ java Client ${METADATA_HOSTNAME} ${CONFIG_FILE}
 - **mv** *‘path to source file’* *‘path to target file’* : Moves the file located in ‘source’ to ‘target’ path
 - **rm** *‘path to file or directory’* : Removes a directory and it's contents in case of a directory, removes a file in case of a file
 - **open** *‘path to file’* : Opens a file with the application specified on configuration file apps.conf
-
-<br><br/>
-## Close Meta-Data Server and Storage Server
-##### These programs can be closed with:
-- <kbd>CTRL C</kbd> : The program will force close and will not inform the others of his close by RMI, which forces to restart *‘rmiregistry’* and all the others before starting it again
-- <kbd>CTRL D</kbd> : The program will notify all the others of his close by RMI before it really quits, so it's ok to restart it again without restarting the others
