@@ -4,7 +4,12 @@
 Implementation of a Distributed File-System that consists in three components:
 * The meta-data server is responsible for storing the meta-data information relative to all storage servers. This unit only stores the real location of the files across the network file-system.
 * The storage servers are responsible for storing the real data like files and directories, each one works like a single local file-systen. They inform the meta-data server of each action they do.
-* The client is an interface to any user control the file-system, they see the network file-system connected as if it was a unique file-system.
+* The clients are an interface to any user control the file-system, they see the network file-system connected as if it was a unique file-system.
+
+
+<br><br>
+## Dependencies
+- [JDK 8](https://docs.oracle.com/javase/8/docs/technotes/guides/install/linux_jdk.html)
 
 
 <br><br>
