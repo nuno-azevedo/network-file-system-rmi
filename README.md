@@ -30,16 +30,19 @@ $ rmiregistry
 ##### 2° Meta-Data Server
 ```bash
 $ java MetaDataServer ${METADATA_HOSTNAME}
+$ # Example: java MetaDataServer 127.0.0.1:10000
 ```
 
 ##### 3° Storage Server
 ```bash
 $ java StorageServer ${METADATA_HOSTNAME} ${STORAGE_HOSTNAME} ${STORAGE_LOCAL_PATH} ${STORAGE_FILESYSTEM_PATH}
+$ # Example: java StorageServer 127.0.0.1:10000 127.0.0.1:11000 ~/Storage /Storage
 ```
 
 ##### 4° Client
 ```bash
 $ java Client ${METADATA_HOSTNAME} ${CONFIG_FILE}
+$ # Example: java Client 127.0.0.1:10000 conf/apps.conf
 ```
 
 
